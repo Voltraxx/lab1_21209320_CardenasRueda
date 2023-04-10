@@ -12,7 +12,8 @@
                           sistema
                           (list (car sistema)  ; Toma simplemente el nombre del sistema
                                 (cons (list letra nombre capacidad)(cadr sistema))  ; Añade en la 2da posición los componentes del drive
-                                (caddr sistema)))))) ; Si el sistema no ha añadido nada, lista vacía, si ya ha sido agregado algo en la 3ra posición, se mantiene.
+                                (caddr sistema) 
+                                (cadddr sistema))))))
 
 (define register (lambda (sistema) ; añade un usuario al sistema
                    (lambda (nombre)
@@ -20,9 +21,29 @@
                          sistema
                          (list (car sistema)
                                (cadr sistema) ; mantiene los drives añadidos anteriormente
-                               (cons nombre (caddr sistema))))))) ; agrega el nonbre de usuario al sistema (3ra posición)
+                               (cons nombre (caddr sistema)) ; agrega el nombre de usuario al sistema (3ra posición)
+                               (cadddr sistema)))))) 
 
+(define login (lambda (sistema) ; se tomará la 4ta posición de sistema para constatar si hay un usuario logueado o no
+                (lambda (user)
+                  (if (eq? null (cadddr sistema)) ; si está vacío, añade el nombre del usuario logueado
+                      (list (car sistema)
+                            (cadr sistema)
+                            (caddr sistema)
+                             user)
+                      sistema)))) ; si está un usuario logueado, no hace nada
 
+(define logout (lambda (sistema)
+                 (if (eq? (cadddr sistema) null) ; si no hay ningún usuario logueado, no hace nada
+                     sistema
+                     (list (car sistema) ; si hay un usuario logueado, borra la 4ta posición la cual indica qué usuario está logueado
+                           (cadr sistema)
+                           (caddr sistema)
+                           null))))
+                         
+                    
+                      
+                
                   
 
 
@@ -58,3 +79,6 @@
 (define S4 ((run S3 register) "user1")) ; register users
 (define S5 ((run S4 register) "user1"))
 (define S6 ((run S5 register) "user2"))
+
+(define S7 ((run S6 login) "user1")) ; login
+(define S8 ((run S7 login) "user2"))
