@@ -1,7 +1,7 @@
 #lang scheme
 
 (define system (lambda (nombre)      ; Crea una lista del sistema
-          (list nombre null null)))
+          (list nombre null null null null null null)))
 
 (define run (lambda (sistema funcion) ; Hace que la función que se pone como 2do valor de entrada se aplique al sistema
               (funcion sistema)))
@@ -16,10 +16,16 @@
 
 (define register (lambda (sistema) ; añade un usuario al sistema
                    (lambda (nombre)
-                     (list (car sistema)
-                           (cadr sistema) ; mantiene los drives añadidos anteriormente
-                           (cons nombre (caddr sistema)))))) ; agrega el nonbre de usuario al sistema (3ra posición)
-; Revisar un poco, ya que aún no comprendo bien si el agregarlo directamente al sistema así está bien
+                     (if (member nombre (caddr sistema)) ; Evita guardar dos usuarios con el mismo nombre
+                         sistema
+                         (list (car sistema)
+                               (cadr sistema) ; mantiene los drives añadidos anteriormente
+                               (cons nombre (caddr sistema))))))) ; agrega el nonbre de usuario al sistema (3ra posición)
+
+
+                  
+
+
 
 
 
@@ -48,3 +54,7 @@
 (define S1 ((run S0 add-drive) #\C "SO" 1000)) ; add drive
 (define S2 ((run S1 add-drive) #\C "SO1" 3000))
 (define S3 ((run S2 add-drive) #\D "Util" 2000))
+
+(define S4 ((run S3 register) "user1")) ; register users
+(define S5 ((run S4 register) "user1"))
+(define S6 ((run S5 register) "user2"))
