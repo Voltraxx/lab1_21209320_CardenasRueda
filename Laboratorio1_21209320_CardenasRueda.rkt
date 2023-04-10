@@ -41,7 +41,14 @@
                            (caddr sistema)
                            null))))
                          
-                    
+(define switch-drive (lambda (sistema) 
+                       (lambda (letra)
+                         (if (and (member letra (map car (cadr sistema))) (not (eq? null (cadddr sistema)))) ; Dirige al drive si y solo si hay usuario logueado y el drive existe
+                             (list (car sistema)
+                                   letra
+                                   (cadddr sistema))
+                             sistema)))) ; si no se cumplen las condiciones devuelve el sistema de entrada
+                             
                       
                 
                   
@@ -82,3 +89,9 @@
 
 (define S7 ((run S6 login) "user1")) ; login
 (define S8 ((run S7 login) "user2"))
+
+(define S9 (run S8 logout)) ; logout
+(define S10 ((run S9 login) "user2"))
+
+(define S11 ((run S10 switch-drive) #\K)) ; fijar drive
+(define S12 ((run S11 switch-drive) #\C))
