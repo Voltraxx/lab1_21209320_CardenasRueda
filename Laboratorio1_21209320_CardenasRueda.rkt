@@ -1,52 +1,84 @@
 #lang scheme
 
-(define system (lambda (nombre)      ; Crea una lista del sistema
-          (list nombre null null null null null null)))
+(require "TDA_fecha.rkt")
+(require "TDA_selectorSistema.rkt")
 
-(define run (lambda (sistema funcion) ; Hace que la función que se pone como 2do valor de entrada se aplique al sistema
+; Función sistema
+; Constructor
+; Crea una lista para simular un sistema, conteniendo el nombre, sus drives, sus usuarios y el usuario logueado
+; Dominio: nombre(string)
+; Recorrido: sistema(lista)
+(define system (lambda (nombre)
+                 (list (list nombre fecha) null null null))) ; deja registro de la fecha junto al nombre del sistema
+; ¡NO SEGURO SI LA FECHA SE REGISTRARÁ ASÍ EN SU FORMA FINAL!
+
+; Función run
+; Permite que una función se ejecute, como lo puede ser add-drive, register, etc.
+; Dominio: sistema X función
+; Recorrido: sistema (con la función ya aplicada)
+(define run (lambda (sistema funcion)
               (funcion sistema)))
 
-(define add-drive (lambda (sistema)  ; Añade un drive al sistema dado como entrada
+; Función add-drive
+; Añade una unidad (ej: #/C) al sistema (2da posición) siempre que no se haya agregado una anteriormente con la misma letra
+; Dominio: sistema X (letra, nombre y capacidad de la unidad)
+; Recorrido: sistema
+(define add-drive (lambda (sistema)  
                     (lambda (letra nombre capacidad)
-                      (if (member letra (map car (cadr sistema))) ; Se busca la letra del drive mediante member, si member retorna un valor distinto a null, no se aplica la adición del drive
+                      (if (member letra (map car (sistema_drives sistema))) ; Se busca la letra del drive mediante member, si member retorna un valor distinto a null, no se aplica la adición del drive
                           sistema
-                          (list (car sistema)  ; Toma simplemente el nombre del sistema
-                                (cons (list letra nombre capacidad)(cadr sistema))  ; Añade en la 2da posición los componentes del drive
-                                (caddr sistema) 
-                                (cadddr sistema))))))
+                          (list (sistema_nombre sistema)  ; Toma simplemente el nombre del sistema
+                                (cons (list letra nombre capacidad)(sistema_drives sistema))  ; Añade en la 2da posición los componentes del drive
+                                (sistema_usuarios sistema) 
+                                (sistema_log sistema))))))
 
-(define register (lambda (sistema) ; añade un usuario al sistema
+; Función register
+; añade un usuario al sistema, siempre que no se haya creado con anterioridad
+; Dominio: sistema X nombre del usuario
+; Recorrido: sistema
+(define register (lambda (sistema) 
                    (lambda (nombre)
-                     (if (member nombre (caddr sistema)) ; Evita guardar dos usuarios con el mismo nombre
+                     (if (member nombre (sistema_usuarios sistema)) ; Evita guardar dos usuarios con el mismo nombre
                          sistema
-                         (list (car sistema)
-                               (cadr sistema) ; mantiene los drives añadidos anteriormente
-                               (cons nombre (caddr sistema)) ; agrega el nombre de usuario al sistema (3ra posición)
-                               (cadddr sistema)))))) 
+                         (list (sistema_nombre sistema)
+                               (sistema_drives sistema) ; mantiene los drives añadidos anteriormente
+                               (cons nombre (sistema_usuarios sistema)) ; agrega el nombre de usuario al sistema (3ra posición)
+                               (sistema_log sistema))))))
 
+; Función login
+; Permite iniciar sesión a un usuario existente
+; Dominio: sistema X usuario
+; Recorrido: sistema
 (define login (lambda (sistema) ; se tomará la 4ta posición de sistema para constatar si hay un usuario logueado o no
                 (lambda (user)
-                  (if (eq? null (cadddr sistema)) ; si está vacío, añade el nombre del usuario logueado
-                      (list (car sistema)
-                            (cadr sistema)
-                            (caddr sistema)
+                  (if (eq? null (sistema_log sistema)) ; si está vacío, añade el nombre del usuario logueado
+                      (list (sistema_nombre sistema)
+                            (sistema_drives sistema)
+                            (sistema_usuarios sistema)
                              user)
                       sistema)))) ; si está un usuario logueado, no hace nada
 
+; Función logout
+; Permite salir de un usuario actualmente logueado
+; Dominio: Sistema
+; Recorrido: Sistema
 (define logout (lambda (sistema)
-                 (if (eq? (cadddr sistema) null) ; si no hay ningún usuario logueado, no hace nada
+                 (if (eq? (sistema_log sistema) null) ; si no hay ningún usuario logueado, no hace nada
                      sistema
-                     (list (car sistema) ; si hay un usuario logueado, borra la 4ta posición la cual indica qué usuario está logueado
-                           (cadr sistema)
-                           (caddr sistema)
+                     (list (sistema_nombre sistema) ; si hay un usuario logueado, borra la 4ta posición la cual indica qué usuario está logueado
+                           (sistema_drives sistema)
+                           (sistema_usuarios sistema)
                            null))))
-                         
+
+; Función switch-drive
+; Cambia al drive en el cual se desea trabajar siempre y cuando este exista, y haya un usuario actualmente logueado
+; Dominio: sistema X drive (letra)
+; Recorrido: sistema
 (define switch-drive (lambda (sistema) 
                        (lambda (letra)
-                         (if (and (member letra (map car (cadr sistema))) (not (eq? null (cadddr sistema)))) ; Dirige al drive si y solo si hay usuario logueado y el drive existe
-                             (list (car sistema)
-                                   letra
-                                   (cadddr sistema))
+                         (if (and (member letra (map car (sistema_drives sistema))) (not (eq? null (sistema_log sistema)))) ; Dirige al drive si y solo si hay usuario logueado y el drive existe
+                             (list (sistema_nombre sistema)
+                                   letra)
                              sistema)))) ; si no se cumplen las condiciones devuelve el sistema de entrada
                              
                       
@@ -57,7 +89,6 @@
 
 
 
-; ¡No se han implementado los TDA tal cual (en vez de llamar a "car", llamar a "drive-sistema" o algo por el estilo)!
 
 
 

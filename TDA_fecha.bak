@@ -1,0 +1,12 @@
+#lang scheme
+
+;TDA fecha
+;Constructor
+(define tiempo current-seconds)
+(define tiempo2 (seconds->date(tiempo)))
+
+(define fecha (list (date-day tiempo2) (date-month tiempo2) (date-year tiempo2))) ; Crea lista con 3 valores, día, mes y año
+
+;Pertenencia
+(define fecha? (lambda (fecha)
+                 (and (list? fecha) (= 3 (length fecha)))))
