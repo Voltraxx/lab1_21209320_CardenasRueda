@@ -78,18 +78,28 @@
                        (lambda (letra)
                          (if (and (member letra (map car (sistema_drives sistema))) (not (eq? null (sistema_log sistema)))) ; Dirige al drive si y solo si hay usuario logueado y el drive existe
                              (list (sistema_nombre sistema)
-                                   letra)
+                                   (sistema_drives sistema) 
+                                   (sistema_usuarios sistema)
+                                   (list (sistema_log sistema)
+                                         (string-append (string-append (string letra) ":") "/"))) ; crea una lista añadiendo el path al usuario logueado
                              sistema)))) ; si no se cumplen las condiciones devuelve el sistema de entrada
-                             
-                      
-                
-                  
+
+; Funcion make directory
+; Crea una carpeta en el path actual, la carpeta tiene información como su nombre, fecha creación, usuario quien la creo, path y atributo de seguridad (lo crea como vacío)
+(define md (lambda (sistema) 
+             (lambda (nombre)
+               (let ((archivo (list nombre fecha (sistema_log sistema) null)))
+                 (if (and (member nombre (map car sistema)) (eq? (cadr (list-ref archivo 2)) (cadr (list-ref sistema 3)))) ; si el nombre existe en el mismo nivel (path actual) no se crea la carpeta
+                     sistema
+                     (append sistema (list archivo)))))))
 
 
 
 
-
-
+         
+         
+         
+  
 
 
 
@@ -126,3 +136,7 @@
 
 (define S11 ((run S10 switch-drive) #\K)) ; fijar drive
 (define S12 ((run S11 switch-drive) #\C))
+
+(define S13 ((run S12 md) "folder1")) ; make directory
+(define S14 ((run S13 md) "folder2"))
+(define S15 ((run S14 md) "folder2"))
