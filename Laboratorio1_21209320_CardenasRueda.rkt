@@ -3,6 +3,7 @@
 (require "TDA_fecha.rkt")
 (require "TDA_selectorSistema.rkt")
 
+
 ; Función sistema
 ; Constructor
 ; Crea una lista para simular un sistema, conteniendo el nombre, sus drives, sus usuarios y el usuario logueado
@@ -77,23 +78,69 @@
 (define switch-drive (lambda (sistema) 
                        (lambda (letra)
                          (if (and (member letra (map car (sistema_drives sistema))) (not (eq? null (sistema_log sistema)))) ; Dirige al drive si y solo si hay usuario logueado y el drive existe
-                             (list (sistema_nombre sistema)
+                             (list (list (car (sistema_nombre sistema)) (cadr (sistema_nombre sistema)) (string-append (string letra) ":/")) ; guarda la letra del drive que se está trabajando
                                    (sistema_drives sistema) 
                                    (sistema_usuarios sistema)
                                    (list (sistema_log sistema)
-                                         (string-append (string-append (string letra) ":") "/"))) ; crea una lista añadiendo el path al usuario logueado
+                                         (string-append (string-append (string letra) ":") "/"))
+                                   null) ; crea una lista añadiendo el path actual al usuario logueado
                              sistema)))) ; si no se cumplen las condiciones devuelve el sistema de entrada
 
 ; Funcion make directory
 ; Crea una carpeta en el path actual, la carpeta tiene información como su nombre, fecha creación, usuario quien la creo, path y atributo de seguridad (lo crea como vacío)
+; Dominio: sistema X nombre del directorio
+; Recorrido: sistema
 (define md (lambda (sistema) 
              (lambda (nombre)
                (let ((archivo (list nombre fecha (sistema_log sistema) null)))
-                 (if (and (member nombre (map car sistema)) (eq? (cadr (list-ref archivo 2)) (cadr (list-ref sistema 3)))) ; si el nombre existe en el mismo nivel (path actual) no se crea la carpeta
-                     sistema
-                     (append sistema (list archivo)))))))
+                 (if (eq? (list-ref sistema 4) null)
+                     (let ((archivo_esp (cons (list nombre fecha (sistema_log sistema) null) '())))
+                     (append (take sistema 4) (list archivo_esp)))
+                     (if (and (member nombre (map car (list-ref sistema 4))) (eq? (cadr (list-ref archivo 2)) (cadr (list-ref sistema 3)))) ; si el nombre existe en el mismo nivel (path actual) no se crea la carpeta
+                         sistema
+                         (list (sistema_nombre sistema)
+                               (sistema_drives sistema)
+                               (sistema_usuarios sistema)
+                               (sistema_log sistema)
+                               (append (list-ref sistema 4) (list archivo)))))))))
+
+(define cd (lambda (sistema)
+             (lambda (comando)
+               (if (eq? comando "/")
+                   (list (sistema_nombre sistema)
+                         (sistema_drives sistema)
+                         (sistema_usuarios sistema)
+                         (list (car (sistema_log sistema)) (caddr (sistema_nombre sistema)))
+                         (list-ref sistema 4))
+                   (if (eq? comando "..")
+                       (if (eq? (caddr (sistema_nombre sistema)) (cadr (sistema_log sistema)))
+                           (sistema)
+                           (list (sistema_nombre sistema)
+                                 (sistema_drives sistema)
+                                 (sistema_usuarios sistema)
+                                 (list (car (sistema_log sistema)) (string-join (reverse (cdr (reverse (string-split (cadr (sistema_log sistema)) "/")))) "/"))  
+                                 (list-ref sistema 4)))
+                       (if (not (member (cadr (sistema_log sistema)) (map cadr (map caddr (list-ref sistema 4)))))
+                           sistema
+                           (let ((filtro (filter (lambda (sublist) (string=? (cadr (sistema_log sistema)) (cadr (caddr sublist))))(list-ref sistema 4))))
+                             (list (sistema_nombre sistema)
+                                   (sistema_drives sistema)
+                                   (sistema_usuarios sistema)
+                                   (list (car (sistema_log sistema))
+                                         (string-append (cadr (sistema_log sistema)) comando "/"))
+                                   (list-ref sistema 4)))))))))
+                       
+                       
+
+                   
+                   
 
 
+                   
+                   
+                  
+                     
+               
 
 
          
@@ -140,3 +187,6 @@
 (define S13 ((run S12 md) "folder1")) ; make directory
 (define S14 ((run S13 md) "folder2"))
 (define S15 ((run S14 md) "folder2"))
+(define S16 ((run S15 md) "folder3"))
+
+(define S17 ((run S16 cd) "folder2")) ; change directory
