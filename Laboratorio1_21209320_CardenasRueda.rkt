@@ -1,8 +1,7 @@
-#lang scheme
+#lang racket
 
 (require "TDA_fecha.rkt")
 (require "TDA_selectorSistema.rkt")
-
 
 ; Función sistema
 ; Constructor
@@ -32,7 +31,8 @@
                                 (cons (list letra nombre capacidad)(sistema_drives sistema))  ; Añade en la 2da posición los componentes del drive
                                 (sistema_usuarios sistema) 
                                 (sistema_log sistema)
-                                (sistema_folders sistema)))))) ; Se mantienen estos espacios para próximas funciones
+                                (sistema_folders sistema)
+                                (sistema_files sistema)))))) ; Se mantienen estos espacios para próximas funciones
 
 ; Función register
 ; añade un usuario al sistema, siempre que no se haya creado con anterioridad
@@ -46,7 +46,8 @@
                                (sistema_drives sistema) ; mantiene los drives añadidos anteriormente
                                (cons nombre (sistema_usuarios sistema)) ; agrega el nombre de usuario al sistema (3ra posición)
                                (sistema_log sistema)
-                               (sistema_folders sistema))))))
+                               (sistema_folders sistema)
+                               (sistema_files sistema))))))
 
 ; Función login
 ; Permite iniciar sesión a un usuario existente
@@ -59,7 +60,8 @@
                             (sistema_drives sistema)
                             (sistema_usuarios sistema)
                             (list user null)
-                            (sistema_folders sistema))
+                            (sistema_folders sistema)
+                            (sistema_files sistema))
                       sistema)))) ; si está un usuario logueado, no hace nada
 
 ; Función logout
@@ -73,7 +75,8 @@
                            (sistema_drives sistema)
                            (sistema_usuarios sistema)
                            (list null (cadr (sistema_log sistema)))
-                           (sistema_folders sistema)))))
+                           (sistema_folders sistema)
+                           (sistema_files sistema)))))
 
 ; Función switch-drive
 ; Cambia al drive en el cual se desea trabajar siempre y cuando este exista, y haya un usuario actualmente logueado
@@ -87,7 +90,8 @@
                                    (sistema_usuarios sistema)
                                    (list (car (sistema_log sistema))
                                              (string-append (string-append (string letra) ":") "/"))
-                                   (sistema_folders sistema)) ; crea una lista añadiendo el path actual al usuario logueado
+                                   (sistema_folders sistema)
+                                   (sistema_files sistema)) ; crea una lista añadiendo el path actual al usuario logueado
                              sistema)))) ; si no se cumplen las condiciones devuelve el sistema de entrada
 
 ; Función make directory
@@ -99,14 +103,15 @@
                (let ((archivo (list nombre fecha (sistema_log sistema) null))) ; archivo contiene el nombre, fecha de creación, el usuario y la ruta en donde fue creado, y un null para atributos de seguridad
                  (if (eq? (list-ref sistema 4) null)
                      (let ((archivo_esp (cons (list nombre fecha (sistema_log sistema) null) '())))
-                     (append (take sistema 4) (list archivo_esp))) ; Para cuando se agrega el primer archivo del sistema, no habrá problemas
-                     (if (and (member nombre (map car (list-ref sistema 4))) (eq? (cadr (list-ref archivo 2)) (cadr (list-ref sistema 3)))) ; si el nombre existe en el mismo nivel (path actual) no se crea la carpeta
+                     (append (take sistema 4) (list archivo_esp) (list (sistema_files sistema)))) ; Para cuando se agrega el primer archivo del sistema, no habrá problemas
+                     (if (and (member nombre (map car (sistema_folders sistema))) (eq? (cadr (list-ref archivo 2)) (cadr (list-ref sistema 3)))) ; si el nombre existe en el mismo nivel (path actual) no se crea la carpeta
                          sistema
                          (list (sistema_nombre sistema)
                                (sistema_drives sistema)
                                (sistema_usuarios sistema)
                                (sistema_log sistema)
-                               (append (sistema_folders sistema) (list archivo)))))))))
+                               (append (sistema_folders sistema) (list archivo))
+                               (sistema_files sistema))))))))
 
 ; Función change directory
 ; Permite ubicarse dentro del drive en las distintas carpetas. "/" ubica en la base del drive, ".." retrocede una ubicación y en caso de cualquier otro string,
@@ -120,7 +125,8 @@
                          (sistema_drives sistema)
                          (sistema_usuarios sistema)
                          (list (car (sistema_log sistema)) (caddr (sistema_nombre sistema))) ; como la 3ra posición en sistema_nombre es el drive actual, se reemplaza el path actual por este, volviendo a la raíz
-                         (sistema_folders sistema))
+                         (sistema_folders sistema)
+                         (sistema_files sistema))
                    (if (eq? comando "..")
                        (if (string=? (caddr (sistema_nombre sistema)) (cadr (sistema_log sistema))) 
                            sistema ; si el drive actual es igual al path actual, no se puede devolver más por lo que no se hace nada
@@ -129,7 +135,8 @@
                                  (sistema_usuarios sistema)
                                  (list (car (sistema_log sistema))
                                        (string-append (string-join (reverse (cdr (reverse (string-split (cadr (sistema_log sistema)) "/")))) "/") "/")) ; como al separarlo se crea un espacio vacío "", se borra al hacerle un reverse y cdr. luego se aplica otro reverse y se junta todo
-                                 (sistema_folders sistema)))
+                                 (sistema_folders sistema)
+                                 (sistema_files sistema)))
                        (if (not (member (cadr (sistema_log sistema)) (map cadr (map caddr (sistema_folders sistema)))))
                            sistema ; si no existe un folder con la ruta actual, no se puede hacer nada por lo que se devuelve el mismo sistema de entrada
                            (let ((filtro (filter (lambda (sublist) (string=? (cadr (sistema_log sistema)) (cadr (caddr sublist))))(sistema_folders sistema)))) ; crea una lista con los folder que estén actualmente visibles
@@ -141,10 +148,32 @@
                                          (sistema_usuarios sistema)
                                          (list (car (sistema_log sistema))
                                                (string-append (cadr (sistema_log sistema)) (string-append comando "/"))) ; actualiza el path al entrar a una carpeta
-                                         (sistema_folders sistema)))
+                                         (sistema_folders sistema)
+                                         (sistema_files sistema)))
                                  sistema))))))))) ; si no estaba el nombre, no se puede acceder a una carpeta inexistente, por lo que no se hace nada
+
+(define add-file (lambda (sistema)
+                   (lambda (archivo)
+                     (let ((datos (append archivo (list (sistema_log sistema)) fecha)))
+                       (if (eq? (sistema_files sistema) null)
+                           (list (sistema_nombre sistema)
+                                 (sistema_drives sistema)
+                                 (sistema_usuarios sistema)
+                                 (sistema_log sistema)
+                                 (sistema_folders sistema)
+                                 (append (sistema_files sistema) (list datos)))
+                           (if (member (car datos) (map car (sistema_files sistema)))
+                               sistema
+                               (list (sistema_nombre sistema)
+                                     (sistema_drives sistema)
+                                     (sistema_usuarios sistema)
+                                     (sistema_log sistema)
+                                     (sistema_folders sistema)
+                                     (append (sistema_files sistema) (list datos)))))))))
                        
-                       
+; en la llamada a la función se ha implementado "file" simplemente como una list usando "list", esto no sé si está bien (esperando respuesta profesor)
+; esto debido a que no me acepta file como un procedimiento adecuado en scheme
+; se ha implementado de manera provisional en el TDA_selectorSistema, pero si es una forma válida se creará un TDA_files para ello.
 
                    
                    
@@ -217,3 +246,8 @@
 (define S27 ((run S26 switch-drive) #\D))
 (define S28 ((run S27 md) "folder5"))
 (define S29 ((run S28 cd) "folder5"))
+                     
+(define S32 ((run S29 add-file) (file "foo1.txt" "txt" "hello world 1"))) ; add file
+(define S33 ((run S32 add-file) (file "foo2.txt" "txt" "hello world 2")))
+(define S34 ((run S33 add-file) (file "foo3.docx" "docx" "hello world 3")))
+(define S35 ((run S34 add-file) (file "goo4.docx" "docx" "hello world 4" #\h #\r)))

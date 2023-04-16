@@ -10,5 +10,8 @@
 (define sistema_log cadddr)
 (define sistema_folders (lambda (lista)
                           (list-ref lista 4)))
+(define sistema_files (lambda (lista)
+                        (list-ref lista 5)))
+(define file list)
 
-(provide sistema_nombre sistema_drives sistema_usuarios sistema_log sistema_folders)
+(provide sistema_nombre sistema_drives sistema_usuarios sistema_log sistema_folders sistema_files file)
