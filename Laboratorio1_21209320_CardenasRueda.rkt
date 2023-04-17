@@ -154,7 +154,7 @@
 
 (define add-file (lambda (sistema)
                    (lambda (archivo)
-                     (let ((datos (append archivo (list (sistema_log sistema)) fecha)))
+                     (let ((datos (append (take archivo 1) (list fecha) (list (sistema_log sistema)) (cdr archivo))))
                        (if (eq? (sistema_files sistema) null)
                            (list (sistema_nombre sistema)
                                  (sistema_drives sistema)
@@ -171,12 +171,41 @@
                                      (sistema_folders sistema)
                                      (append (sistema_files sistema) (list datos)))))))))
                        
-; en la llamada a la función se ha implementado "file" simplemente como una list usando "list", esto no sé si está bien (esperando respuesta profesor)
-; esto debido a que no me acepta file como un procedimiento adecuado en scheme
-; se ha implementado de manera provisional en el TDA_selectorSistema, pero si es una forma válida se creará un TDA_files para ello.
+; en la llamada a la función se ha implementado "file" definiéndola como una lista
 
-                   
-                   
+; Función delete
+; Permite eliminar un archivo SOLAMENTE SI DICHO ARCHIVO EXISTE. Se debe ingresar el nombre del archivo junto a su extensión (implementación simple)
+; Dominio: Sistema X comando (string del nombre del archivo)
+; Recorrido: Sistema
+(define del (lambda (sistema)
+              (lambda (comando)
+                (if (member comando (map car (sistema_files sistema))) ; revisa si el archivo existe
+                    (let ((new_list (filter (lambda (elemento) (not (eq? (car elemento) comando))) (sistema_files sistema)))) ; crea una lista sin el archivo a eliminar
+                      (list (sistema_nombre sistema)
+                            (sistema_drives sistema)
+                            (sistema_usuarios sistema)
+                            (sistema_log sistema)
+                            (sistema_folders sistema)
+                            new_list)) ; agrega la lista de archivos sin el que se quiere eliminar
+                    sistema))))
+
+; Función remove directory
+; Elimina una carpeta (directorio) siempre y cuando este se encuentre vacío (no posee archivos NI otras carpetas dentro)
+; Dominio: Sistema X nombre (o path)
+; Recorrido: Sistema
+(define rd (lambda (sistema)
+             (lambda (nombre)
+               (if (and (and (member nombre (map car (sistema_folders sistema))) ; revisa si el archivo existe
+                             (eq? null (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) nombre)) (sistema_files sistema)))) ; se crea una lista con los archivos dentro de la carpeta a eliminar. si es nula se procede, sino, no se elimina la carpeta
+                        (eq? null (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) nombre)) (sistema_folders sistema)))) ; al igual que lo anterior, crea una lista con los directorios dentro de la carpeta a eliminar. sigue las mismas condiciones que el anterior
+                   (let ((new_list (filter (lambda (elemento) (not (eq? (car elemento) nombre))) (sistema_folders sistema)))) ; crea una lista de directorios sin el directorio a eliminar
+                     (list (sistema_nombre sistema)
+                           (sistema_drives sistema)
+                           (sistema_usuarios sistema)
+                           (sistema_log sistema)
+                           new_list ; agrega la lista de carpetas sin la que se quiere eliminar
+                           (sistema_files sistema)))
+                     sistema))))
 
 
                    
@@ -251,3 +280,7 @@
 (define S33 ((run S32 add-file) (file "foo2.txt" "txt" "hello world 2")))
 (define S34 ((run S33 add-file) (file "foo3.docx" "docx" "hello world 3")))
 (define S35 ((run S34 add-file) (file "goo4.docx" "docx" "hello world 4" #\h #\r)))
+
+(define S38 ((run S35 del) "goo4.docx")) ; del
+
+(define S41 ((run S38 rd) "folder1")) ; remove directory
