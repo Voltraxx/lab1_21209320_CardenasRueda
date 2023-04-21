@@ -184,14 +184,24 @@
 (define del (lambda (sistema)
               (lambda (comando)
                 (if (member comando (map car (sistema_files sistema))) ; revisa si el archivo existe
-                    (let ((new_list (filter (lambda (elemento) (not (eq? (car elemento) comando))) (sistema_files sistema)))) ; crea una lista sin el archivo a eliminar
+                    (let ((new_list_files (filter (lambda (elemento) (not (eq? (car elemento) comando))) (sistema_files sistema)))) ; crea una lista sin el archivo a eliminar
                       (list (sistema_nombre sistema)
                             (sistema_drives sistema)
                             (sistema_usuarios sistema)
                             (sistema_log sistema)
                             (sistema_folders sistema)
-                            new_list)) ; agrega la lista de archivos sin el que se quiere eliminar
-                    sistema))))
+                            new_list_files)) ; agrega la lista de archivos sin el que se quiere eliminar
+                    (if (member comando (map car (sistema_folders sistema)))
+                        (let ((list_folders_elim (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) comando))) (sistema_folders sistema)))) ; crea lista con las carpetas que no estén dentro de la carpeta a eliminar
+                          (let ((list_files_elim_f (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) comando))) (sistema_files sistema)))) ; crea lista con los archivos que no estén dentro de la carpeta a eliminar
+                            (let ((list_folders_elim_f (filter (lambda (elemento) (not (eq? (car elemento) comando))) list_folders_elim))) ; a la lista con las subcarpetas eliminadas se le elimina la carpeta principal a eliminar
+                              (list (sistema_nombre sistema)
+                                    (sistema_drives sistema)
+                                    (sistema_usuarios sistema)
+                                    (sistema_log sistema)
+                                    list_folders_elim_f ; se reemplaza por una lista sin la carpeta eliminada y sus subcarpetas
+                                    list_files_elim_f)))) ; se reemplaza por una lista sin los archivos de la carpeta eliminada
+                        sistema)))))
 
 ; Función remove directory
 ; Elimina una carpeta (directorio) siempre y cuando este se encuentre vacío (no posee archivos NI otras carpetas dentro)
@@ -246,10 +256,6 @@
 
 
 
-
-
-
-                   
                   
                      
                
@@ -321,7 +327,9 @@
 (define S34 ((run S33 add-file) (file "foo3.docx" "docx" "hello world 3")))
 (define S35 ((run S34 add-file) (file "goo4.docx" "docx" "hello world 4" #\h #\r)))
 
-(define S38 ((run S35 del) "foo3.docx")) ; del
+(define S38 ((run S35 del) "goo4.docx")) ; del
+(define S39 ((run S35 cd) ".."))
+(define S40 ((run S35 del) "folder1"))
 
 (define S41 ((run S38 rd) "folder1")) ; remove directory
 
