@@ -222,39 +222,69 @@
                      sistema))))
 
 ; Función copy
-; Permite copiar un archivo o carpeta, y pegarlo en una dirección destino. Como no se especifica en el enunciado del TDA, esta función funciona SI Y SOLO SI SE ENCUENTRA EN LA MISMA DIRECCIÓN DEL ARCHIVO A COPIAR
+; Permite copiar un archivo o carpeta, y pegarlo en una dirección destino. Como no se especifica en el enunciado del TDA, esta función funciona SI Y SOLO SI SE ENCUENTRA EN LA MISMA DIRECCIÓN DEL ARCHIVO A COPIAR. Esto para que no se copien 2 carpetas de distintos niveles
 ; ej: si quiere copiar un archivo "ex1.txt" que está en la dirección "C:/", usted tambien debe estar ubicado en la dirección "C:/"
 ; aclaración: se pide que al ingresar la ruta destino se escriba el drive en mayúsculas, ya que en el script sale en minúsculas.
 ; Dominio: Sistema X nombre del dato X dirección de destino
 ; Recorrido: Sistema
 (define copy (lambda (sistema)
                (lambda (dato destino)
-                 (let ((carpeta (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema)))) ; genera una lista con la carpeta a copiar. si no existe, entrega una lista vacía (null)        
+                 (let ((carpeta (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema)))); genera una lista con la carpeta a copiar. si no existe, entrega una lista vacía (null)        
                    (let ((archivo (filter (lambda (elemento) (and (string=? dato (car elemento)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema))))  ; genera una lista con el archivo a copiar. si no existe, entrega una lista vacía (null)
                      (if (eq? carpeta null) ; pregunta si la carpeta a copiar existe
                          (if (eq? archivo null) ; pregunta si el archivo a copiar existe
                              sistema ; si no se ha copiado nada por no existir (en la ruta actualmente visible) no se modifica nada
-                             (let ((string_mod (string-append destino (string-join (cdr (string-split (cadr (caddr (car archivo))) "/")) "/") "/"))) ; si se ha copiado un archivo, guarda la ruta destino
-                               (let ((nuevo_archivo (list (car (car archivo)) (cadr (car archivo)) (list (car (caddr (car archivo))) string_mod) (cdr (cdddr (car archivo)))))) ; aplica la ruta actualizada al archivo
+                               (let ((nuevo_archivo (append (list (car (car archivo))) (list (cadr (car archivo))) (list (list (car (caddr (car archivo))) destino)) (cdr (cddr (car archivo)))))) ; aplica la ruta actualizada al archivo
                                (list (sistema_nombre sistema)
                                      (sistema_drives sistema)
                                      (sistema_usuarios sistema)
                                      (sistema_log sistema)
                                      (sistema_folders sistema)
-                                     (append (sistema_files sistema) (list nuevo_archivo)))))) ; añade el archivo ya pegado en la dirección destino
+                                     (append (sistema_files sistema) (list nuevo_archivo))))) ; añade el archivo ya pegado en la dirección destino
                          (let ((carpetas_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_folders sistema)))) ; si se ha copiado una carpeta, crea una lista con todas las carpetas que esta contiene              
                            (let ((archivos_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_files sistema)))) ; crea una lista con todos los archivos que la carpeta copiada contiene
                              (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-append destino (string-join (cdr (string-split (cadr (caddr folder))))))) (cdr (cdddr folder))))carpetas_int))) ; a la copia de carpetas, le actualiza la dirección a la dirección destino
-                               (let ((archivos_copy (map (lambda (file) (list (car file) (cadr file) (list (car (caddr file)) (string-append destino (string-join (cdr (string-split (cadr (caddr file))))))) (cdr (cdddr file))))archivos_int))) ; a la copia de archivos, le actualiza la dirección a la dirección destino
-                                 (let ((carpeta_copia_principal (list (car (car carpeta)) (cadr (car carpeta)) (list (car (caddr (car carpeta))) (string-append destino (string-join (cdr (string-split (cadr (caddr (car carpeta)))))))) (cdr (cdddr (car carpeta)))))) ; actualiza la dirección a la copia de la carpeta que se quiere copiar (la que se ha dado como entrada)
-                                 (list (sistema_nombre sistema)
-                                       (sistema_drives sistema)
-                                       (sistema_usuarios sistema)
-                                       (sistema_log sistema)
-                                       (append (sistema_folders sistema) (list carpeta_copia_principal) carpetas_copy) ; añade la carpeta copiada junto a sus carpetas contenidas con su nueva dirección
-                                       (append (sistema_files sistema) archivos_copy))))))))))))) ; añade los archivos que estaban contenidos dentro de la carpeta copiada con su nueva dirección
+                               (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-append destino (string-join (cdr (string-split (cadr (caddr file)))))))) (cdr (cdddr file)))) archivos_int))) ; a la copia de archivos, le actualiza la dirección a la dirección destino
+                                 (let ((carpeta_copia_principal (list (car (car carpeta)) (cadr (car carpeta)) (list (car (caddr (car carpeta))) destino) (cdr (cdddr (car carpeta)))))) ; actualiza la dirección a la copia de la carpeta que se quiere copiar (la que se ha dado como entrada)
+                                   (list (sistema_nombre sistema)
+                                         (sistema_drives sistema)
+                                         (sistema_usuarios sistema)
+                                         (sistema_log sistema)
+                                         (append (sistema_folders sistema) (list carpeta_copia_principal) carpetas_copy) ; añade la carpeta copiada junto a sus carpetas contenidas con su nueva dirección
+                                         (append (sistema_files sistema) archivos_copy))))))))))))) ; añade los archivos que estaban contenidos dentro de la carpeta copiada con su nueva dirección
 
-
+; Función move
+; Mueve una carpeta o archivo a una dirección destino. Trabaja de igual forma que la función copy, pero a excepción de que esta función borra los archivos en la ruta origen. En caso de mover una carpeta, lo mueve junto a sus subdirectorios y subarchivos
+; Dominio: Sistema X dato (archivo o carpeta a mover) X destino (dirección de destino)
+; Recorrido: Sistema
+(define move (lambda (sistema)
+               (lambda (dato destino)
+                 (let ((carpeta (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema)))) ; genera una lista con la carpeta a mover. si no existe, entrega una lista vacía (null)        
+                   (let ((archivo (filter (lambda (elemento) (and (string=? dato (car elemento)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema))))  ; genera una lista con el archivo a mover. si no existe, entrega una lista vacía (null)
+                     (if (eq? carpeta null) ; pregunta si la carpeta a mover existe
+                         (if (eq? archivo null) ; pregunta si el archivo a mover existe
+                             sistema ; si no se ha movido nada por no existir (en la ruta actualmente visible) no se modifica nada
+                               (let ((nuevo_archivo (append (list (car (car archivo))) (list (cadr (car archivo))) (list (list (car (caddr (car archivo))) destino)) (cdr (cddr (car archivo)))))) ; aplica la ruta actualizada al archivo
+                                 (let ((files_archivo_borrado (filter (lambda (elemento) (not (eq? (car elemento) dato))) (sistema_files sistema)))) ; recrea la lista de archivos anterior, pero con el archivo a mover eliminado de la ruta actual
+                                   (list (sistema_nombre sistema)
+                                         (sistema_drives sistema)
+                                         (sistema_usuarios sistema)
+                                         (sistema_log sistema)
+                                         (sistema_folders sistema)
+                                         (append (list files_archivo_borrado) (list nuevo_archivo)))))) ; añade el archivo a una lista donde se eliminó este en su ruta de origen
+                         (let ((carpetas_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_folders sistema)))) ; crea una lista con todas las carpetas que la carpeta a mover contiene              
+                           (let ((archivos_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_files sistema)))) ; crea una lista con todos los archivos que la carpeta a mover contiene
+                             (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-append destino (string-join (cdr (string-split (cadr (caddr folder))))))) (cdr (cdddr folder))))carpetas_int))) ; a la copia de carpetas, le actualiza la dirección a la dirección destino
+                               (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-append destino (string-join (cdr (string-split (cadr (caddr file)))))))) (cdr (cdddr file)))) archivos_int))) ; a la copia de archivos, le actualiza la dirección a la dirección destino
+                                 (let ((carpeta_copia_principal (list (car (car carpeta)) (cadr (car carpeta)) (list (car (caddr (car carpeta))) (string-append destino (string-join (cdr (string-split (cadr (caddr (car carpeta)))))))) (cdr (cdddr (car carpeta)))))) ; actualiza la dirección a la carpeta principal a mover (la que se ha dado como entrada)
+                                   (let ((folders_carpetas_borrar (filter (lambda (elemento) (and (not (eq? (car elemento) dato)) (not (string-contains? (cadr (caddr elemento)) dato)))) (sistema_folders sistema))))
+                                     (let ((files_archivos_borrar (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) dato))) (sistema_files sistema))))
+                                       (list (sistema_nombre sistema)
+                                             (sistema_drives sistema)
+                                             (sistema_usuarios sistema)
+                                             (sistema_log sistema)
+                                             (append folders_carpetas_borrar carpetas_copy (list carpeta_copia_principal)) ; añade la carpeta movida junto a sus carpetas contenidas con su nueva dirección, y las elimina de su ruta origen
+                                             (append files_archivos_borrar archivos_copy))))))))))))))) ; añade los archivos que estaban contenidos dentro de la carpeta movida con su nueva dirección, y las elimina de su ruta origen
 
                   
                      
@@ -332,5 +362,20 @@
 (define S40 ((run S35 del) "folder1"))
 
 (define S41 ((run S38 rd) "folder1")) ; remove directory
+(define S42 ((run S41 cd) "folder1"))
+(define S44 ((run S42 cd) ".."))
 
 (define S46 ((run S41 copy) "foo1.txt" "C:/folder3/")) ; copy
+
+(define S49 ((run S41 move) "folder3" "D:/")) ; move
+
+
+
+
+; ejemplos de único uso (para probar funciones)
+(define A ((run S41 switch-drive) #\C))
+(define S ((run A move) "folder2" "D:/"))
+(define D ((run A cd) "folder2"))
+(define F ((run D add-file) (file "PRUEBA.docx" "docx" "TESTEO" #\h #\r)))
+(define G ((run F cd) ".."))
+(define H ((run G move) "folder2" "D:/"))
