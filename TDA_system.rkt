@@ -260,7 +260,7 @@
 (define move (lambda (sistema)
                (lambda (dato destino)
                  (let ((carpeta (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema)))) ; genera una lista con la carpeta a mover. si no existe, entrega una lista vacía (null)        
-                   (let ((archivo (filter (lambda (elemento) (and (string=? dato (car elemento)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema))))  ; genera una lista con el archivo a mover. si no existe, entrega una lista vacía (null)
+                   (let ((archivo (filter (lambda (elemento) (and (string=? dato (car elemento)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema)))) ; genera una lista con el archivo a mover. si no existe, entrega una lista vacía (null)
                      (if (eq? carpeta null) ; pregunta si la carpeta a mover existe
                          (if (eq? archivo null) ; pregunta si el archivo a mover existe
                              sistema ; si no se ha movido nada por no existir (en la ruta actualmente visible) no se modifica nada
@@ -274,8 +274,8 @@
                                          (append (list files_archivo_borrado) (list nuevo_archivo)))))) ; añade el archivo a una lista donde se eliminó este en su ruta de origen
                          (let ((carpetas_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_folders sistema)))) ; crea una lista con todas las carpetas que la carpeta a mover contiene              
                            (let ((archivos_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_files sistema)))) ; crea una lista con todos los archivos que la carpeta a mover contiene
-                             (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-append destino (string-join (cdr (string-split (cadr (caddr folder)) "/")) "/"))) (cdr (cdddr folder)))) carpetas_int))) ; a la copia de carpetas, le actualiza la dirección a la dirección destino
-                               (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-append destino (string-join (cdr (string-split (cadr (caddr file)) "/")) "/")))) (cdr (cddr file)))) archivos_int))) ; a la copia de archivos, le actualiza la dirección a la dirección destino
+                             (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-append destino (string-join (cdr (string-split (cadr (caddr folder)) "/")) "/") "/")) (cdr (cdddr folder)))) carpetas_int))) ; a la copia de carpetas, le actualiza la dirección a la dirección destino
+                               (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-append destino (string-join (cdr (string-split (cadr (caddr file)) "/")) "/") "/"))) (cdr (cddr file)))) archivos_int))) ; a la copia de archivos, le actualiza la dirección a la dirección destino
                                  (let ((carpeta_copia_principal (list (car (car carpeta)) (cadr (car carpeta)) (list (car (caddr (car carpeta))) (string-append destino (string-join (cdr (string-split (cadr (caddr (car carpeta)))))))) (cdr (cdddr (car carpeta)))))) ; actualiza la dirección a la carpeta principal a mover (la que se ha dado como entrada)
                                    (let ((folders_carpetas_borrar (filter (lambda (elemento) (and (not (eq? (car elemento) dato)) (not (string-contains? (cadr (caddr elemento)) dato)))) (sistema_folders sistema)))) ; crea una lista sin las carpetas a mover
                                      (let ((files_archivos_borrar (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) dato))) (sistema_files sistema)))) ; crea una lista sin los archivos a mover
@@ -292,8 +292,8 @@
 ; Recorrido: Sistema
 (define ren (lambda (sistema)
               (lambda (nombre_or nombre_nu)
-                (let ((carpeta_existe (filter (lambda (elemento) (and (string=? (car elemento) nombre_or) (eq? (cadr (caddr elemento)) (cadr (sistema_log sistema))))) (sistema_folders sistema))))  ; crea lista para ver si la carpeta ya existe en el nivel actual
-                  (let ((archivo_existe (filter (lambda (elemento) (and (string=? (car elemento) nombre_or) (eq? (cadr (caddr elemento)) (cadr (sistema_log sistema))))) (sistema_files sistema))))  ; crea lista para ver si el archivo ya existe en el nivel actual
+                (let ((carpeta_existe (filter (lambda (elemento) (and (string=? (car elemento) nombre_or) (string=? (cadr (caddr elemento)) (cadr (sistema_log sistema))))) (sistema_folders sistema)))) ; crea lista para ver si la carpeta ya existe en el nivel actual
+                  (let ((archivo_existe (filter (lambda (elemento) (and (string=? (car elemento) nombre_or) (string=? (cadr (caddr elemento)) (cadr (sistema_log sistema))))) (sistema_files sistema)))) ; crea lista para ver si el archivo ya existe en el nivel actual
                     (let ((unicidad_folders (filter (lambda (elemento) (and (string=? (car elemento) nombre_nu) (eq? (cadr (caddr elemento)) (cadr (sistema_log sistema))))) (sistema_folders sistema)))) ; crea lista con las carpetas nombradas con el nuevo nombre en el nivel actual
                       (let ((unicidad_files (filter (lambda (elemento) (and (string=? (car elemento) nombre_nu) (eq? (cadr (caddr elemento)) (cadr (sistema_log sistema))))) (sistema_files sistema)))) ; crea lista con los archivos nombrados con el nuevo nombre en el nivel actual
                         (if (or (eq? null carpeta_existe) (not (eq? null unicidad_folders)))
@@ -310,8 +310,8 @@
                             (let ((borrar_carpeta (filter (lambda (elemento) (and (not (eq? (car elemento) nombre_or)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema))))
                               (let ((carpetas_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) nombre_or)) (sistema_folders sistema)))) ; crea una lista con todas las carpetas que la carpeta a renombrar contiene
                                 (let ((archivos_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) nombre_or)) (sistema_files sistema)))) ; crea una lista con todos los archivos que la carpeta a renombrar contiene
-                                  (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-join (string-split (cadr (caddr folder)) nombre_or) nombre_nu)) (cdr (cdddr folder)))) carpetas_int))) ; a la copia de carpetas, le actualiza la dirección con el nuevo nombre del folder que las contiene
-                                    (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-join (string-split (cadr (caddr file)) nombre_or) nombre_nu))) (cdr (cdddr file)))) archivos_int))) ; a la copia de archivos, le actualiza la dirección con el nuevo nombre del folder que las contiene
+                                  (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-replace (cadr (caddr folder)) (string-append nombre_or "/") (string-append nombre_nu "/"))) (cdr (cdddr folder)))) carpetas_int))) ; a la copia de carpetas, le actualiza la dirección con el nuevo nombre del folder que las contiene
+                                    (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-replace (cadr (caddr file)) (string-append nombre_or "/") (string-append nombre_nu "/")))) (cdr (cdddr file)))) archivos_int))) ; a la copia de archivos, le actualiza la dirección con el nuevo nombre del folder que las contiene
                                       (let ((folders_carpetas_borrar (filter (lambda (elemento) (and (not (eq? (car elemento) nombre_or)) (not (string-contains? (cadr (caddr elemento)) nombre_or)))) (sistema_folders sistema)))) ; crea lista sin las carpetas que están siendo modificadas
                                         (let ((files_archivos_borrar (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) nombre_or))) (sistema_files sistema)))) ; crea lista sin los archivos que están siendo modificados
                                           (let ((nueva_carpeta (append (list nombre_nu) (cdr (car carpeta_existe))))) ; crea una carpeta con el nuevo nombre
@@ -330,7 +330,10 @@
   
 
 
-
+;h
+;f
+;h;dd
+;Dfg
 
 
 
@@ -412,3 +415,5 @@
 (define F ((run D add-file) (file "PRUEBA.docx" "docx" "TESTEO" #\h #\r)))
 (define G ((run F cd) ".."))
 (define H ((run G move) "folder2" "D:/"))
+(define J ((run H switch-drive) #\D))
+(define K ((run J ren) "folder2" "ARCHIVO DE PRUEBA"))
