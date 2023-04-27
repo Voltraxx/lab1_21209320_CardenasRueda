@@ -325,7 +325,7 @@
 ; Función dir
 ; Permite mostrar por pantalla los elementos del directorio actual y los elemenetos de subdirectorios, dependiendo del comando.
 ; Requisito de implementación: Deben aplicarse paréntesis extra a la hora de llamar a la función para el caso de no recibir argumentos. Ex: (display (run K dir)) -----> (display ((run K dir)))
-; Dominio: Sistema X comandos (null o "/s")
+; Dominio: Sistema X comandos (null, "/s", "/a", "/s /a" y "/a /s")
 ; Recorrido: String (separando cada elemento por " --- ")
 (define dir (lambda (sistema)
               (lambda args ; permite entregar N cantidad de argumentos, pudiendo variar
@@ -343,7 +343,16 @@
                                                        (not (member #\h (car car_arch))))
                                                   (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
                                                   (ciclo (cdr car_arch) str))
-                                              (display "no hay más comandos")))))) ; como solo está implementado "/s" y el caso de no-argumentos, imprime esto si se otorga otra entrada
+                                              (if (eq? (car args) "/a")
+                                                  (if (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch)))) ; en este caso simplemente pregunta si está en el mismo directorio, no importa si está oculto
+                                                      (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
+                                                      (ciclo (cdr car_arch) str))
+                                                  (if (or (eq? (car args) "/s /a") (eq? (car args) "/a /s")) ; toma el caso en el que se entreguen al revés los comandos
+                                                      (if (or (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch)))) ; similar a "/s" pero ya no importa si el elemento está oculto o no
+                                                              (string-contains? (cadr (caddr (car car_arch))) (cadr (sistema_log sistema))))
+                                                          (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
+                                                          (ciclo (cdr car_arch) str))
+                                                      (display "no hay más comandos"))))))))
                   (ciclo car_arch))))) ; se llama a ciclo para ejecutar la función local  
 
 
