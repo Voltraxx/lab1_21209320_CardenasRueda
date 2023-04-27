@@ -352,7 +352,14 @@
                                                               (string-contains? (cadr (caddr (car car_arch))) (cadr (sistema_log sistema))))
                                                           (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
                                                           (ciclo (cdr car_arch) str))
-                                                      (display "no hay más comandos"))))))))
+                                                      (if (eq? (car args) "/?")
+                                                          (begin (display "Comandos disponibles:") (newline)
+                                                                 (display "- null: Si no se entregan argumentos a la función, se mostrarán los elementos del directorio actual a EXCEPCIÓN de los elementos de carácter oculto (h)") (newline)
+                                                                 (display "- /s: Este comando permite mostrar los elementos tanto del directorio actual, como de los subdirectorios de este a EXCEPCIÓN de los elementos de carácter oculto (h)") (newline)
+                                                                 (display "- /a: Este comando permite mostrar todos los elementos del directorio actual, INCLUYENDO los elementos de carácter oculto (h)") (newline)
+                                                                 (display "- '/s /a' o '/a /s': Permite mostrar todos los elementos tanto del directorio actual como de los subdirectorios de este, INCLUYENDO los elementos de carácter oculto") (newline) (newline)
+                                                                 "Esos son todos los comandos disponibles, para que cada comando surta efecto (a excepción de 'null') debe agregar doble comillas a los comandos.") ; No se añade display para que la llamada a la función mediante "display" no imprima un null
+                                                          "No es un comando válido. Intente el comando /? (añadiéndole doble comillas)"))))))))
                   (ciclo car_arch))))) ; se llama a ciclo para ejecutar la función local  
 
 
