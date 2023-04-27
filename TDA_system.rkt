@@ -321,33 +321,30 @@
                                                 (sistema_log sistema)
                                                 (append folders_carpetas_borrar carpetas_copy (list nueva_carpeta)) ; agrega la lista de carpetas con todo modificado
                                                 (append files_archivos_borrar archivos_copy)))))))))))))))))) ; agrega la lista de archivos con todo modificado
-
+            
 ; Función dir
-; Permite (actualmente) imprimir por pantalla los archivos y carpetas que se encuentren en el directorio actual. Estos elementos deben estar visibles
-; Dominio: Sistema X comandos ("/s" , "/a", etc)
-; Recorrido: String/s (impresos mediante display)
+; Permite mostrar por pantalla los elementos del directorio actual y los elemenetos de subdirectorios, dependiendo del comando.
+; Requisito de implementación: Deben aplicarse paréntesis extra a la hora de llamar a la función para el caso de no recibir argumentos. Ex: (display (run K dir)) -----> (display ((run K dir)))
+; Dominio: Sistema X comandos (null o "/s")
+; Recorrido: String (separando cada elemento por " --- ")
 (define dir (lambda (sistema)
               (lambda args ; permite entregar N cantidad de argumentos, pudiendo variar
-                (let ((car_arch (append (sistema_folders sistema) (sistema_files sistema)))) ; crea una lista que junta los archivos y carpetas del sistema
-                  (define ciclo (lambda (car_arch) ; se crea función local
+                (let ((car_arch (append (sistema_folders sistema) (sistema_files sistema)))) ; crea una lista que junta los archivos y carpetas del sistema 
+                  (define ciclo (lambda (car_arch (str "")) ; se crea función local, donde "str """ indica un string con valor inicial ""
                                   (if (eq? car_arch null) ; caso de bordes en donde no hay archivos o carpetas para analizar
-                                      null
+                                      str ; retorna el string final armado
                                       (if (eq? args null)
                                           (if (and (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch)))) (not (member #\h (car car_arch)))) ; pregunta para ver si el archivo o carpeta se encuentra en el directorio actual, y si además este está visible
-                                              (begin (display (car (car car_arch))) ; muestra el archivo o carpeta visible en el directorio actual
-                                                     (newline) ; salto de línea
-                                                     (ciclo (cdr car_arch))) ; vuelve a llamar a la función pero sin el primer elemento, el cual fue el recién analizado
-                                              (ciclo (cdr car_arch))) ; en caso de no encontrarse visible o no estar en el directorio actual, no hace nada y vuelve a llamar a la función sin el elemento
-                                          null))))
-                  (ciclo car_arch))))) ; se llama a ciclo para ejecutar la función local
-
-                
-                    
-         
-         
-         
-  
-
+                                              (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función pero sin el primer elemento y con el string añadido al string inicial
+                                              (ciclo (cdr car_arch) str)) ; en caso de no encontrarse visible o no estar en el directorio actual, no hace nada y vuelve a llamar a la función sin el elemento
+                                          (if (eq? (car args) "/s")
+                                              (if (and (or (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch))))
+                                                           (string-contains? (cadr (caddr (car car_arch))) (cadr (sistema_log sistema)))) ; en este caso además de preguntar por los elementos directamente visibles, pregunta además por los subelementos
+                                                       (not (member #\h (car car_arch))))
+                                                  (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
+                                                  (ciclo (cdr car_arch) str))
+                                              (display "no hay más comandos")))))) ; como solo está implementado "/s" y el caso de no-argumentos, imprime esto si se otorga otra entrada
+                  (ciclo car_arch))))) ; se llama a ciclo para ejecutar la función local  
 
 
 
@@ -431,5 +428,5 @@
 (define G ((run F cd) ".."))
 (define H ((run G move) "folder2" "D:/"))
 (define J ((run H switch-drive) #\D))
-(define K ((run J ren) "folder2" "ARCHIVO DE PRUEBA"))
+(define K ((run J ren) "folder2" "ARCHIVO_DE_PRUEBA"))
 (define L ((run K cd) "folder5"))
