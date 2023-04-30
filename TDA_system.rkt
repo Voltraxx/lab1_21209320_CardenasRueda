@@ -362,10 +362,51 @@
                                                           "No es un comando válido. Intente el comando /? (añadiéndole doble comillas)"))))))))
                   (ciclo car_arch))))) ; se llama a ciclo para ejecutar la función local  
 
-
-
-
-
+; Función format
+; Permite formatear una unidad. Esto borra todo el contenido de dicha unidad y permite cambiarle el nombre a la unidad formateada. Si el directorio en donde se está posicionado está en el drive a formatear, redirige el path a la raiz del drive
+; Dominio: Sistema X letra (unidad) X nombre (unidad)
+; Recorrido: Sistema
+(define format (lambda (sistema)
+                 (lambda (letra nombre)
+                   (if (and (char? letra) (member letra (map car (sistema_drives sistema)))) ; Pregunta si lo dado es un caracter, y si el drive dado se encuentra registrado en el sistema
+                       (let ((letra_s (string letra))) ; Crea "letra_s" que almacena la letra en versión string
+                         (let ((reserva_folders (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) (string-append letra_s ":/")))) (sistema_folders sistema)))) ; Crea una lista con las carpetas que no pertenecen al drive a formatear
+                           (let ((reserva_files (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) (string-append letra_s ":/")))) (sistema_files sistema)))) ; Crea una lista con los archivos que no pertenecen al drive a formatear
+                             (let ((drive_a_borrar (filter (lambda (elemento) (char=? (car elemento) letra)) (sistema_drives sistema)))) ; Crea una lista con el drive a formatear
+                               (let ((borrar_drive (filter (lambda (elemento) (not (char=? (car elemento) letra))) (sistema_drives sistema)))) ; Crea una nueva lista con el drive a formatear eliminado
+                                 (if (string-contains? (caddr (sistema_nombre sistema)) letra_s) ; Revisa si se está usando actualmente la unidad a formatear
+                                     (list (sistema_nombre sistema) 
+                                           (append borrar_drive (cons (list letra nombre (caddr (car drive_a_borrar))) '())) ; registra el drive con su nuevo nombre a los drives del sistema
+                                           (sistema_usuarios sistema)
+                                           (list (car (sistema_log sistema)) (string-append letra_s ":/")) ; actualiza el path a la raiz de la unidad ya que se estaba posicionado dentro de ella
+                                           reserva_folders
+                                           reserva_files)
+                                     (list (sistema_nombre sistema)
+                                           (append borrar_drive (cons (list letra nombre (caddr (car drive_a_borrar))) '())) ; registra el drive con su nuevo nombre a los drives del sistema
+                                           (sistema_usuarios sistema)
+                                           (sistema_log sistema)
+                                           reserva_folders
+                                           reserva_files)))))))
+                       (if (and (string? letra) (member (string-ref letra 0) (map car (sistema_drives sistema))))
+                           (let ((reserva_folders (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) (string-append letra ":/")))) (sistema_folders sistema)))) ; Crea una lista con las carpetas que no pertenecen al drive a formatear
+                             (let ((reserva_files (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) (string-append letra ":/")))) (sistema_files sistema)))) ; Crea una lista con los archivos que no pertenecen al drive a formatear
+                               (let ((drive_a_borrar (filter (lambda (elemento) (string=? (string (car elemento)) letra)) (sistema_drives sistema)))) ; Crea una lista con el drive a formatear
+                                 (let ((borrar_drive (filter (lambda (elemento) (not (string=? (string (car elemento)) letra))) (sistema_drives sistema)))) ; Crea una nueva lista con el drive a formatear eliminado
+                                   (if (string-contains? (caddr (sistema_nombre sistema)) letra) ; Revisa si se está usando actualmente la unidad a formatear
+                                     (list (sistema_nombre sistema)
+                                           (append borrar_drive (cons (list letra nombre (caddr (car drive_a_borrar))) '())) ; registra el drive con su nuevo nombre a los drives del sistema
+                                           (sistema_usuarios sistema)
+                                           (list (car (sistema_log sistema)) (string-append letra ":/")) ; actualiza el path a la raiz de la unidad ya que se estaba posicionado dentro de ella
+                                           reserva_folders
+                                           reserva_files)
+                                     (list (sistema_nombre sistema)
+                                           (append borrar_drive (cons (list letra nombre (caddr (car drive_a_borrar))) '())) ; registra el drive con su nuevo nombre a los drives del sistema
+                                           (sistema_usuarios sistema)
+                                           (sistema_log sistema)
+                                           reserva_folders
+                                           reserva_files))))))
+                           sistema)))))
+                                   
 
 
 
@@ -446,3 +487,7 @@
 (define J ((run H switch-drive) #\D))
 (define K ((run J ren) "folder2" "ARCHIVO_DE_PRUEBA"))
 (define L ((run K cd) "folder5"))
+(define Ñ ((run L format) #\C "HOLA"))
+(define Z ((run L format) #\D "HOLA"))
+(define X ((run L format) "C" "HOLA"))
+(define C ((run L format) "D" "HOLA"))
