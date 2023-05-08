@@ -321,23 +321,92 @@
                                                 (sistema_log sistema)
                                                 (append folders_carpetas_borrar carpetas_copy (list nueva_carpeta)) ; agrega la lista de carpetas con todo modificado
                                                 (append files_archivos_borrar archivos_copy)))))))))))))))))) ; agrega la lista de archivos con todo modificado
-                            
+            
+; Función dir
+; Permite mostrar por pantalla los elementos del directorio actual y los elemenetos de subdirectorios, dependiendo del comando.
+; Requisito de implementación: Deben aplicarse paréntesis extra a la hora de llamar a la función para el caso de no recibir argumentos. Ex: (display (run K dir)) -----> (display ((run K dir)))
+; Dominio: Sistema X comandos (null, "/s", "/a", "/s /a" y "/a /s")
+; Recorrido: String (separando cada elemento por " --- ")
+(define dir (lambda (sistema)
+              (lambda args ; permite entregar N cantidad de argumentos, pudiendo variar
+                (let ((car_arch (append (sistema_folders sistema) (sistema_files sistema)))) ; crea una lista que junta los archivos y carpetas del sistema 
+                  (define ciclo (lambda (car_arch (str "")) ; se crea función local, donde "str """ indica un string con valor inicial ""
+                                  (if (eq? car_arch null) ; caso de bordes en donde no hay archivos o carpetas para analizar
+                                      str ; retorna el string final armado
+                                      (if (eq? args null)
+                                          (if (and (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch)))) (not (member #\h (car car_arch)))) ; pregunta para ver si el archivo o carpeta se encuentra en el directorio actual, y si además este está visible
+                                              (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función pero sin el primer elemento y con el string añadido al string inicial
+                                              (ciclo (cdr car_arch) str)) ; en caso de no encontrarse visible o no estar en el directorio actual, no hace nada y vuelve a llamar a la función sin el elemento
+                                          (if (eq? (car args) "/s")
+                                              (if (and (or (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch))))
+                                                           (string-contains? (cadr (caddr (car car_arch))) (cadr (sistema_log sistema)))) ; en este caso además de preguntar por los elementos directamente visibles, pregunta además por los subelementos
+                                                       (not (member #\h (car car_arch))))
+                                                  (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
+                                                  (ciclo (cdr car_arch) str))
+                                              (if (eq? (car args) "/a")
+                                                  (if (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch)))) ; en este caso simplemente pregunta si está en el mismo directorio, no importa si está oculto
+                                                      (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
+                                                      (ciclo (cdr car_arch) str))
+                                                  (if (or (eq? (car args) "/s /a") (eq? (car args) "/a /s")) ; toma el caso en el que se entreguen al revés los comandos
+                                                      (if (or (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch)))) ; similar a "/s" pero ya no importa si el elemento está oculto o no
+                                                              (string-contains? (cadr (caddr (car car_arch))) (cadr (sistema_log sistema))))
+                                                          (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
+                                                          (ciclo (cdr car_arch) str))
+                                                      (if (eq? (car args) "/?")
+                                                          (begin (display "Comandos disponibles:") (newline)
+                                                                 (display "- null: Si no se entregan argumentos a la función, se mostrarán los elementos del directorio actual a EXCEPCIÓN de los elementos de carácter oculto (h)") (newline)
+                                                                 (display "- /s: Este comando permite mostrar los elementos tanto del directorio actual, como de los subdirectorios de este a EXCEPCIÓN de los elementos de carácter oculto (h)") (newline)
+                                                                 (display "- /a: Este comando permite mostrar todos los elementos del directorio actual, INCLUYENDO los elementos de carácter oculto (h)") (newline)
+                                                                 (display "- '/s /a' o '/a /s': Permite mostrar todos los elementos tanto del directorio actual como de los subdirectorios de este, INCLUYENDO los elementos de carácter oculto") (newline) (newline)
+                                                                 "Esos son todos los comandos disponibles, para que cada comando surta efecto (a excepción de 'null') debe agregar doble comillas a los comandos.") ; No se añade display para que la llamada a la función mediante "display" no imprima un null
+                                                          "No es un comando válido. Intente el comando /? (añadiéndole doble comillas)"))))))))
+                  (ciclo car_arch))))) ; se llama a ciclo para ejecutar la función local  
 
-
-         
-         
-         
-  
-
-
-;h
-;f
-;h;dd
-;Dfg
-
-
-
-
+; Función format
+; Permite formatear una unidad. Esto borra todo el contenido de dicha unidad y permite cambiarle el nombre a la unidad formateada. Si el directorio en donde se está posicionado está en el drive a formatear, redirige el path a la raiz del drive
+; Dominio: Sistema X letra (unidad) X nombre (unidad)
+; Recorrido: Sistema
+(define format (lambda (sistema)
+                 (lambda (letra nombre)
+                   (if (and (char? letra) (member letra (map car (sistema_drives sistema)))) ; Pregunta si lo dado es un caracter, y si el drive dado se encuentra registrado en el sistema
+                       (let ((letra_s (string letra))) ; Crea "letra_s" que almacena la letra en versión string
+                         (let ((reserva_folders (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) (string-append letra_s ":/")))) (sistema_folders sistema)))) ; Crea una lista con las carpetas que no pertenecen al drive a formatear
+                           (let ((reserva_files (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) (string-append letra_s ":/")))) (sistema_files sistema)))) ; Crea una lista con los archivos que no pertenecen al drive a formatear
+                             (let ((drive_a_borrar (filter (lambda (elemento) (char=? (car elemento) letra)) (sistema_drives sistema)))) ; Crea una lista con el drive a formatear
+                               (let ((borrar_drive (filter (lambda (elemento) (not (char=? (car elemento) letra))) (sistema_drives sistema)))) ; Crea una nueva lista con el drive a formatear eliminado
+                                 (if (string-contains? (caddr (sistema_nombre sistema)) letra_s) ; Revisa si se está usando actualmente la unidad a formatear
+                                     (list (sistema_nombre sistema) 
+                                           (append borrar_drive (cons (list letra nombre (caddr (car drive_a_borrar))) '())) ; registra el drive con su nuevo nombre a los drives del sistema
+                                           (sistema_usuarios sistema)
+                                           (list (car (sistema_log sistema)) (string-append letra_s ":/")) ; actualiza el path a la raiz de la unidad ya que se estaba posicionado dentro de ella
+                                           reserva_folders
+                                           reserva_files)
+                                     (list (sistema_nombre sistema)
+                                           (append borrar_drive (cons (list letra nombre (caddr (car drive_a_borrar))) '())) ; registra el drive con su nuevo nombre a los drives del sistema
+                                           (sistema_usuarios sistema)
+                                           (sistema_log sistema)
+                                           reserva_folders
+                                           reserva_files)))))))
+                       (if (and (string? letra) (member (string-ref letra 0) (map car (sistema_drives sistema))))
+                           (let ((reserva_folders (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) (string-append letra ":/")))) (sistema_folders sistema)))) ; Crea una lista con las carpetas que no pertenecen al drive a formatear
+                             (let ((reserva_files (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) (string-append letra ":/")))) (sistema_files sistema)))) ; Crea una lista con los archivos que no pertenecen al drive a formatear
+                               (let ((drive_a_borrar (filter (lambda (elemento) (string=? (string (car elemento)) letra)) (sistema_drives sistema)))) ; Crea una lista con el drive a formatear
+                                 (let ((borrar_drive (filter (lambda (elemento) (not (string=? (string (car elemento)) letra))) (sistema_drives sistema)))) ; Crea una nueva lista con el drive a formatear eliminado
+                                   (if (string-contains? (caddr (sistema_nombre sistema)) letra) ; Revisa si se está usando actualmente la unidad a formatear
+                                     (list (sistema_nombre sistema)
+                                           (append borrar_drive (cons (list letra nombre (caddr (car drive_a_borrar))) '())) ; registra el drive con su nuevo nombre a los drives del sistema
+                                           (sistema_usuarios sistema)
+                                           (list (car (sistema_log sistema)) (string-append letra ":/")) ; actualiza el path a la raiz de la unidad ya que se estaba posicionado dentro de ella
+                                           reserva_folders
+                                           reserva_files)
+                                     (list (sistema_nombre sistema)
+                                           (append borrar_drive (cons (list letra nombre (caddr (car drive_a_borrar))) '())) ; registra el drive con su nuevo nombre a los drives del sistema
+                                           (sistema_usuarios sistema)
+                                           (sistema_log sistema)
+                                           reserva_folders
+                                           reserva_files))))))
+                           sistema)))))
+                                   
 
 
 
@@ -416,4 +485,9 @@
 (define G ((run F cd) ".."))
 (define H ((run G move) "folder2" "D:/"))
 (define J ((run H switch-drive) #\D))
-(define K ((run J ren) "folder2" "ARCHIVO DE PRUEBA"))
+(define K ((run J ren) "folder2" "ARCHIVO_DE_PRUEBA"))
+(define L ((run K cd) "folder5"))
+(define Ñ ((run L format) #\C "HOLA"))
+(define Z ((run L format) #\D "HOLA"))
+(define X ((run L format) "C" "HOLA"))
+(define C ((run L format) "D" "HOLA"))

@@ -228,7 +228,8 @@
 ; Dominio: Sistema X nombre del dato X dirección de destino
 ; Recorrido: Sistema
 (define copy (lambda (sistema)
-               (lambda (dato destino)
+               (lambda (dato destino) (display destino)
+                 (let ((destino (string-append (string-upcase (substring destino 0 1)) (substring destino 1)))) (newline) (display destino) ; Hace que el primer elemento de la ruta (drive) sea tomado como mayúscula, por lo que no es case-sensitive
                  (let ((carpeta (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema)))); genera una lista con la carpeta a copiar. si no existe, entrega una lista vacía (null)        
                    (let ((archivo (filter (lambda (elemento) (and (string=? dato (car elemento)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema))))  ; genera una lista con el archivo a copiar. si no existe, entrega una lista vacía (null)
                      (if (eq? carpeta null) ; pregunta si la carpeta a copiar existe
@@ -251,7 +252,7 @@
                                          (sistema_usuarios sistema)
                                          (sistema_log sistema)
                                          (append (sistema_folders sistema) (list carpeta_copia_principal) carpetas_copy) ; añade la carpeta copiada junto a sus carpetas contenidas con su nueva dirección
-                                         (append (sistema_files sistema) archivos_copy))))))))))))) ; añade los archivos que estaban contenidos dentro de la carpeta copiada con su nueva dirección
+                                         (append (sistema_files sistema) archivos_copy)))))))))))))) ; añade los archivos que estaban contenidos dentro de la carpeta copiada con su nueva dirección
 
 ; Función move
 ; Mueve una carpeta o archivo a una dirección destino. Trabaja de igual forma que la función copy, pero a excepción de que esta función borra los archivos en la ruta origen. En caso de mover una carpeta, lo mueve junto a sus subdirectorios y subarchivos
@@ -259,6 +260,7 @@
 ; Recorrido: Sistema
 (define move (lambda (sistema)
                (lambda (dato destino)
+                 (let ((destino (string-append (string-upcase (substring destino 0 1)) (substring destino 1)))) (newline) (display destino) ; Hace que el primer elemento de la ruta (drive) sea tomado como mayúscula, por lo que no es case-sensitive
                  (let ((carpeta (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema)))) ; genera una lista con la carpeta a mover. si no existe, entrega una lista vacía (null)        
                    (let ((archivo (filter (lambda (elemento) (and (string=? dato (car elemento)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema)))) ; genera una lista con el archivo a mover. si no existe, entrega una lista vacía (null)
                      (if (eq? carpeta null) ; pregunta si la carpeta a mover existe
@@ -284,7 +286,7 @@
                                              (sistema_usuarios sistema)
                                              (sistema_log sistema)
                                              (append folders_carpetas_borrar carpetas_copy (list carpeta_copia_principal)) ; añade la carpeta movida junto a sus carpetas contenidas con su nueva dirección, y las elimina de su ruta origen
-                                             (append files_archivos_borrar archivos_copy))))))))))))))) ; añade los archivos que estaban contenidos dentro de la carpeta movida con su nueva dirección, y las elimina de su ruta origen
+                                             (append files_archivos_borrar archivos_copy)))))))))))))))) ; añade los archivos que estaban contenidos dentro de la carpeta movida con su nueva dirección, y las elimina de su ruta origen
 
 ; Función rename
 ; Renombra un archivo o carpeta QUE ESTÉ ACTUALMENTE VISIBLE, además, si se modifica el nombre de una carpeta se modifica la ruta de las subcarpetas y subarchivos
