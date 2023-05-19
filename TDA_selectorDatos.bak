@@ -1,0 +1,12 @@
+#lang scheme
+
+;TDA_selectorDatos
+;Dirigido a folders y files
+
+;Selectores
+(define carpetas_nivel (lambda (sistema)
+                         (filter (lambda (elemento) (string=? (cadr (list-ref sistema 3)) (cadr (caddr elemento)))) (list-ref sistema 4)))) ; Crea lista con las carpetas del nivel actual
+(define archivos_nivel (lambda (sistema)
+                         (filter (lambda (elemento) (string=? (cadr (list-ref sistema 3)) (cadr (caddr elemento)))) (list-ref sistema 5)))) ; Crea lista con los archivos del nivel actual
+
+(provide carpetas_nivel archivos_nivel)

@@ -16,11 +16,5 @@
 ;Constructor
 (define fecha (list dia mes año)) ; Crea lista con 3 valores, día, mes y año
 
-;Pertenencia
-;Dominio: fecha (lista)
-;Recorrido: Booleano (True / False)
-(define fecha? (lambda (fecha)
-                 (and (list? fecha) (= 3 (length fecha)))))
 
-
-(provide tiempo tiempo2 fecha fecha? dia mes año)
+(provide tiempo tiempo2 fecha dia mes año)

@@ -2,6 +2,7 @@
 
 (require "TDA_fecha.rkt")
 (require "TDA_selectorSistema.rkt")
+(require "TDA_selectorDatos.rkt")
 
 ; Función sistema
 ; Constructor
@@ -10,7 +11,6 @@
 ; Recorrido: sistema(lista)
 (define system (lambda (nombre)
                  (list (list nombre fecha) null null (list null null) null null null null))) ; deja registro de la fecha junto al nombre del sistema
-; ¡NO SEGURO SI LA FECHA SE REGISTRARÁ ASÍ EN SU FORMA FINAL!
 
 ; Función run
 ; Permite que una función se ejecute, como lo puede ser add-drive, register, etc.
@@ -32,7 +32,9 @@
                                 (sistema_usuarios sistema) 
                                 (sistema_log sistema)
                                 (sistema_folders sistema)
-                                (sistema_files sistema)))))) ; Se mantienen estos espacios para próximas funciones
+                                (sistema_files sistema)
+                                (sistema_papeleraC sistema)
+                                (sistema_papeleraA sistema)))))) ; Se mantienen estos espacios para próximas funciones
 
 ; Función register
 ; añade un usuario al sistema, siempre que no se haya creado con anterioridad
@@ -47,7 +49,9 @@
                                (cons nombre (sistema_usuarios sistema)) ; agrega el nombre de usuario al sistema (3ra posición)
                                (sistema_log sistema)
                                (sistema_folders sistema)
-                               (sistema_files sistema))))))
+                               (sistema_files sistema)
+                               (sistema_papeleraC sistema)
+                               (sistema_papeleraA sistema))))))
 
 ; Función login
 ; Permite iniciar sesión a un usuario existente
@@ -55,14 +59,16 @@
 ; Recorrido: sistema
 (define login (lambda (sistema) ; se tomará la 4ta posición de sistema para constatar si hay un usuario logueado o no
                 (lambda (user)
-                  (if (eq? null (car (sistema_log sistema))) ; si está vacío, añade el nombre del usuario logueado
+                  (if (and (eq? null (car (sistema_log sistema))) (member user (sistema_usuarios sistema))) ; si está vacío y existe el usuario, añade el nombre del usuario logueado
                       (list (sistema_nombre sistema)
                             (sistema_drives sistema)
                             (sistema_usuarios sistema)
                             (list user null)
                             (sistema_folders sistema)
-                            (sistema_files sistema))
-                      sistema)))) ; si está un usuario logueado, no hace nada
+                            (sistema_files sistema)
+                            (sistema_papeleraC sistema)
+                            (sistema_papeleraA sistema))
+                      sistema)))) ; si está un usuario logueado o no existe el usuario, no hace nada
 
 ; Función logout
 ; Permite salir de un usuario actualmente logueado
@@ -76,7 +82,9 @@
                            (sistema_usuarios sistema)
                            (list null (cadr (sistema_log sistema)))
                            (sistema_folders sistema)
-                           (sistema_files sistema)))))
+                           (sistema_files sistema)
+                           (sistema_papeleraC sistema)
+                           (sistema_papeleraA sistema)))))
 
 ; Función switch-drive
 ; Cambia al drive en el cual se desea trabajar siempre y cuando este exista, y haya un usuario actualmente logueado
@@ -91,7 +99,9 @@
                                    (list (car (sistema_log sistema))
                                              (string-append (string-append (string letra) ":") "/"))
                                    (sistema_folders sistema)
-                                   (sistema_files sistema)) ; crea una lista añadiendo el path actual al usuario logueado
+                                   (sistema_files sistema) ; crea una lista añadiendo el path actual al usuario logueado
+                                   (sistema_papeleraC sistema)
+                                   (sistema_papeleraA sistema))
                              sistema)))) ; si no se cumplen las condiciones devuelve el sistema de entrada
 
 ; Función make directory
@@ -101,17 +111,19 @@
 (define md (lambda (sistema) 
              (lambda (nombre)
                (let ((archivo (list nombre fecha (sistema_log sistema) null))) ; archivo contiene el nombre, fecha de creación, el usuario y la ruta en donde fue creado, y un null para atributos de seguridad
-                 (if (eq? (list-ref sistema 4) null)
+                 (if (eq? (sistema_folders sistema) null)
                      (let ((archivo_esp (cons (list nombre fecha (sistema_log sistema) null) '())))
-                     (append (take sistema 4) (list archivo_esp) (list (sistema_files sistema)))) ; Para cuando se agrega el primer archivo del sistema, no habrá problemas
-                     (if (and (member nombre (map car (sistema_folders sistema))) (eq? (cadr (list-ref archivo 2)) (cadr (list-ref sistema 3)))) ; si el nombre existe en el mismo nivel (path actual) no se crea la carpeta
+                       (append (take sistema 4) (list archivo_esp) (list (sistema_files sistema)) (list (sistema_papeleraC sistema)) (list (sistema_papeleraA sistema)))) ; Para cuando se agrega el primer archivo del sistema, no habrá problemas
+                     (if (member nombre (map car (carpetas_nivel sistema))) ; si el nombre existe en el mismo nivel (path actual) no se crea la carpeta
                          sistema
                          (list (sistema_nombre sistema)
                                (sistema_drives sistema)
                                (sistema_usuarios sistema)
                                (sistema_log sistema)
                                (append (sistema_folders sistema) (list archivo)) ; añade la carpeta a la lista de carpetas
-                               (sistema_files sistema))))))))
+                               (sistema_files sistema)
+                               (sistema_papeleraC sistema)
+                               (sistema_papeleraA sistema))))))))
 
 ; Función change directory
 ; Permite ubicarse dentro del drive en las distintas carpetas. "/" ubica en la base del drive, ".." retrocede una ubicación y en caso de cualquier otro string,
@@ -126,7 +138,9 @@
                          (sistema_usuarios sistema)
                          (list (car (sistema_log sistema)) (caddr (sistema_nombre sistema))) ; como la 3ra posición en sistema_nombre es el drive actual, se reemplaza el path actual por este, volviendo a la raíz
                          (sistema_folders sistema)
-                         (sistema_files sistema))
+                         (sistema_files sistema)
+                         (sistema_papeleraC sistema)
+                         (sistema_papeleraA sistema))
                    (if (eq? comando "..")
                        (if (string=? (caddr (sistema_nombre sistema)) (cadr (sistema_log sistema))) 
                            sistema ; si el drive actual es igual al path actual, no se puede devolver más por lo que no se hace nada
@@ -136,11 +150,12 @@
                                  (list (car (sistema_log sistema))
                                        (string-append (string-join (reverse (cdr (reverse (string-split (cadr (sistema_log sistema)) "/")))) "/") "/")) ; como al separarlo se crea un espacio vacío "", se borra al hacerle un reverse y cdr. luego se aplica otro reverse y se junta todo
                                  (sistema_folders sistema)
-                                 (sistema_files sistema)))
+                                 (sistema_files sistema)
+                                 (sistema_papeleraC sistema)
+                                 (sistema_papeleraA sistema)))
                        (if (not (member (cadr (sistema_log sistema)) (map cadr (map caddr (sistema_folders sistema)))))
                            sistema ; si no existe un folder con la ruta actual, no se puede hacer nada por lo que se devuelve el mismo sistema de entrada
-                           (let ((filtro (filter (lambda (sublist) (string=? (cadr (sistema_log sistema)) (cadr (caddr sublist))))(sistema_folders sistema)))) ; crea una lista con los folder que estén actualmente visibles
-                             (let ((nombres (map car filtro))) ; crea una lista con los nombres de los folder actualmente visibles
+                             (let ((nombres (map car (carpetas_nivel sistema)))) ; crea una lista con los nombres de los folder actualmente visibles
                                (if (member comando nombres)
                                  (begin ; si el nombre está registrado en nombres, puede acceder al archivo ya que existe
                                    (list (sistema_nombre sistema)
@@ -149,8 +164,10 @@
                                          (list (car (sistema_log sistema))
                                                (string-append (cadr (sistema_log sistema)) (string-append comando "/"))) ; actualiza el path al entrar a una carpeta
                                          (sistema_folders sistema)
-                                         (sistema_files sistema)))
-                                 sistema))))))))) ; si no estaba el nombre, no se puede acceder a una carpeta inexistente, por lo que no se hace nada
+                                         (sistema_files sistema)
+                                         (sistema_papeleraC sistema)
+                                         (sistema_papeleraA sistema)))
+                                 sistema)))))))) ; si no estaba el nombre, no se puede acceder a una carpeta inexistente, por lo que no se hace nada
 
 ; Función add-file
 ; Agrega un archivo al sistema (dentro de la lista de su 6to elemento) representado como una lista, poseyendo nombre,  fecha creación, usuario y ruta, formato, contenido, y posibles atributos de seguridad
@@ -158,49 +175,58 @@
 ; Recorrido: sistema
 (define add-file (lambda (sistema)
                    (lambda (archivo)
-                     (let ((datos (append (take archivo 1) (list fecha) (list (sistema_log sistema)) (cdr archivo)))) ; primero toma el nombre del archivo, luego la fecha, usuario y path de creación, y luego añade los datos de formato, contenido, y atributos de seguridad
+                     (let ((datos (append (take archivo 1) (list fecha) (list (sistema_log sistema)) (cdr archivo)))) ; primero toma el nombre del archivo, luego le agrega la fecha, usuario y path de creación, y luego añade los datos de formato, contenido, y atributos de seguridad
                        (if (eq? (sistema_files sistema) null) ; este es el caso donde no se han agregado archivos anteriormente
                            (list (sistema_nombre sistema)
                                  (sistema_drives sistema)
                                  (sistema_usuarios sistema)
                                  (sistema_log sistema)
                                  (sistema_folders sistema)
-                                 (append (sistema_files sistema) (list datos)))
-                           (if (member (car datos) (map car (sistema_files sistema))) ; este caso se cumple si se han agregado archivos anteriormente, si es así, revisa si no se ha creado un archivo con el mismo nombre
+                                 (append (sistema_files sistema) (list datos))
+                                 (sistema_papeleraC sistema)
+                                 (sistema_papeleraA sistema))
+                           (if (member (car datos) (map car (archivos_nivel sistema))) ; este caso se cumple si se han agregado archivos anteriormente, si es así, revisa si no se ha creado un archivo con el mismo nombre en el mismo nivel
                                sistema
                                (list (sistema_nombre sistema)
                                      (sistema_drives sistema)
                                      (sistema_usuarios sistema)
                                      (sistema_log sistema)
                                      (sistema_folders sistema)
-                                     (append (sistema_files sistema) (list datos))))))))) ; si no hay otro archivo existente con el mismo nombre y en el mismo path, añade dicho archivo al sistema
+                                     (append (sistema_files sistema) (list datos)) ; si no hay otro archivo existente con el mismo nombre y en el mismo path, añade dicho archivo al sistema
+                                     (sistema_papeleraC sistema)
+                                     (sistema_papeleraA sistema))))))))
                        
 ; en la llamada a la función se ha implementado "file" definiéndola como una lista
 
 ; Función delete
-; Permite eliminar un archivo SOLAMENTE SI DICHO ARCHIVO EXISTE. Se debe ingresar el nombre del archivo junto a su extensión (implementación simple)
+; Permite eliminar un archivo (o carpeta) SOLAMENTE SI DICHO ARCHIVO EXISTE. Se debe ingresar el nombre del archivo junto a su extensión (implementación simple)
+; Además, como no se especifica, esta función elimina todos los archivos/carpetas con dicho nombre en el sistema
 ; Dominio: Sistema X comando (string del nombre del archivo)
 ; Recorrido: Sistema
 (define del (lambda (sistema)
               (lambda (comando)
                 (if (member comando (map car (sistema_files sistema))) ; revisa si el archivo existe
-                    (let ((new_list_files (filter (lambda (elemento) (not (eq? (car elemento) comando))) (sistema_files sistema)))) ; crea una lista sin el archivo a eliminar
+                    (let ((new_list_files (filter (lambda (elemento) (not (eq? (car elemento) comando))) (sistema_files sistema)))) ; crea una lista sin el archivo a eliminar (elimina todos los archivos con el nombre indicado)
+                     (let ((archivo_borrar (filter (lambda (elemento) (eq? (car elemento) comando)) (sistema_files sistema)))) ; crea una lista con el archivo a eliminar
                       (list (sistema_nombre sistema)
                             (sistema_drives sistema)
                             (sistema_usuarios sistema)
                             (sistema_log sistema)
                             (sistema_folders sistema)
-                            new_list_files)) ; agrega la lista de archivos sin el que se quiere eliminar
+                            new_list_files ; agrega la lista de archivos sin el que se quiere eliminar
+                            (sistema_papeleraC sistema)
+                            (append (sistema_papeleraA sistema) archivo_borrar)))) ; añade el archivo borrado a la papelera
                     (if (member comando (map car (sistema_folders sistema)))
-                        (let ((list_folders_elim (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) comando))) (sistema_folders sistema)))) ; crea lista con las carpetas que no estén dentro de la carpeta a eliminar
-                          (let ((list_files_elim_f (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) comando))) (sistema_files sistema)))) ; crea lista con los archivos que no estén dentro de la carpeta a eliminar
-                            (let ((list_folders_elim_f (filter (lambda (elemento) (not (eq? (car elemento) comando))) list_folders_elim))) ; a la lista con las subcarpetas eliminadas se le elimina la carpeta principal a eliminar
+                        (let ((list_folders_elim_f (filter (lambda (elemento) (not (eq? (car elemento) comando))) (subdir_borrados sistema comando)))) ; a la lista con las subcarpetas eliminadas se le elimina la carpeta principal a eliminar
+                          (let ((carpeta_principal_borrar (filter (lambda (elemento) (eq? (car elemento) comando)) (subdir_borrados sistema comando)))) ; crea una lista con tod
                               (list (sistema_nombre sistema)
                                     (sistema_drives sistema)
                                     (sistema_usuarios sistema)
                                     (sistema_log sistema)
                                     list_folders_elim_f ; se reemplaza por una lista sin la carpeta eliminada y sus subcarpetas
-                                    list_files_elim_f)))) ; se reemplaza por una lista sin los archivos de la carpeta eliminada
+                                    (archivos_borrados sistema comando) ; se reemplaza por una lista sin los archivos de la carpeta eliminada
+                                    (append (sistema_papeleraC sistema) carpeta_principal_borrar (subdir_borrar sistema comando)) ; añade la carpeta borrada y sus subdirectorios a la papelera
+                                    (append (sistema_papeleraA sistema) (archivos_borrar sistema comando))))) ; añade los archivos eliminados a la papelera
                         sistema)))))
 
 ; Función remove directory
@@ -209,39 +235,59 @@
 ; Recorrido: Sistema
 (define rd (lambda (sistema)
              (lambda (nombre)
-               (if (and (and (member nombre (map car (sistema_folders sistema))) ; revisa si el archivo existe
-                             (eq? null (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) nombre)) (sistema_files sistema)))) ; se crea una lista con los archivos dentro de la carpeta a eliminar. si es nula se procede, sino, no se elimina la carpeta
-                        (eq? null (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) nombre)) (sistema_folders sistema)))) ; al igual que lo anterior, crea una lista con los directorios dentro de la carpeta a eliminar. sigue las mismas condiciones que el anterior
-                   (let ((new_list (filter (lambda (elemento) (not (eq? (car elemento) nombre))) (sistema_folders sistema)))) ; crea una lista de directorios sin el directorio a eliminar
-                     (list (sistema_nombre sistema)
-                           (sistema_drives sistema)
-                           (sistema_usuarios sistema)
-                           (sistema_log sistema)
-                           new_list ; agrega la lista de carpetas sin la que se quiere eliminar
-                           (sistema_files sistema)))
-                     sistema))))
+               (if (not (string-contains? nombre "/"))
+                   (if (and (and (member nombre (map car (sistema_folders sistema))) ; revisa si la carpeta existe
+                                 (eq? null (archivos_borrar sistema nombre))) ; revisa si hay archivos dentro de la carpeta; si es nula se procede, sino, no se elimina la carpeta
+                            (eq? null (subdir_borrar sistema nombre))) ; al igual que lo anterior, revisa si hay subdirectorios dentro de la carpeta. Sigue las mismas condiciones que el anterior
+                       (let ((new_list (filter (lambda (elemento) (not (eq? (car elemento) nombre))) (sistema_folders sistema)))) ; crea una lista de directorios sin el directorio a eliminar
+                         (list (sistema_nombre sistema)
+                               (sistema_drives sistema)
+                               (sistema_usuarios sistema)
+                               (sistema_log sistema)
+                               new_list ; agrega la lista de carpetas sin la que se quiere eliminar
+                               (sistema_files sistema)
+                               (sistema_papeleraC sistema)
+                               (sistema_papeleraA sistema)))
+                       sistema)
+                   (let ((carpeta (car (reverse (string-split nombre "/"))))) ; Si se entregó un path, extrae el nombre de la carpeta que se desea borrar
+                     (if (and (and (member carpeta (map car (sistema_folders sistema))) ; revisa si la carpeta existe
+                                   (eq? null (archivos_borrar sistema nombre))) ; revisa si la carpeta contiene archivos
+                              (eq? null (subdir_borrar sistema nombre))) ; revisa si la carpeta contiene sub-carpetas
+                         (let ((new_list (filter (lambda (elemento) (not (eq? (car elemento) carpeta))) (sistema_folders sistema))))
+                           (list (sistema_nombre sistema)
+                                 (sistema_drives sistema)
+                                 (sistema_usuarios sistema)
+                                 (sistema_log sistema)
+                                 new_list ; agrega la lista de carpetas sin la que se quiere eliminar
+                                 (sistema_files sistema)
+                                 (sistema_papeleraC sistema)
+                                 (sistema_papeleraA sistema)))
+                         sistema))))))
+                           
 
+                    
 ; Función copy
 ; Permite copiar un archivo o carpeta, y pegarlo en una dirección destino. Como no se especifica en el enunciado del TDA, esta función funciona SI Y SOLO SI SE ENCUENTRA EN LA MISMA DIRECCIÓN DEL ARCHIVO A COPIAR. Esto para que no se copien 2 carpetas de distintos niveles
 ; ej: si quiere copiar un archivo "ex1.txt" que está en la dirección "C:/", usted tambien debe estar ubicado en la dirección "C:/"
-; aclaración: se pide que al ingresar la ruta destino se escriba el drive en mayúsculas, ya que en el script sale en minúsculas.
 ; Dominio: Sistema X nombre del dato X dirección de destino
 ; Recorrido: Sistema
 (define copy (lambda (sistema)
-               (lambda (dato destino) (display destino)
-                 (let ((destino (string-append (string-upcase (substring destino 0 1)) (substring destino 1)))) (newline) (display destino) ; Hace que el primer elemento de la ruta (drive) sea tomado como mayúscula, por lo que no es case-sensitive
+               (lambda (dato destino)
+                (let ((destino (string-append (string-upcase (substring destino 0 1)) (substring destino 1)))) ; Hace que el primer elemento de la ruta (drive) sea tomado como mayúscula, por lo que no es case-sensitive
                  (let ((carpeta (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema)))); genera una lista con la carpeta a copiar. si no existe, entrega una lista vacía (null)        
                    (let ((archivo (filter (lambda (elemento) (and (string=? dato (car elemento)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema))))  ; genera una lista con el archivo a copiar. si no existe, entrega una lista vacía (null)
-                     (if (eq? carpeta null) ; pregunta si la carpeta a copiar existe
-                         (if (eq? archivo null) ; pregunta si el archivo a copiar existe
+                     (if (or (eq? carpeta null) (not (eq? null (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (caddr elemento)) destino))) (sistema_folders sistema))))) ; pregunta si la carpeta a copiar existe y si no existe una carpeta con el mismo nombre en la dirección destino
+                         (if (or (eq? archivo null) (not (eq? null (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (caddr elemento)) destino))) (sistema_files sistema))))) ; pregunta si el archivo a copiar existe y si no existe un archivo con el mismo nombre en la dirección destino
                              sistema ; si no se ha copiado nada por no existir (en la ruta actualmente visible) no se modifica nada
-                               (let ((nuevo_archivo (append (list (car (car archivo))) (list (cadr (car archivo))) (list (list (car (caddr (car archivo))) destino)) (cdr (cddr (car archivo)))))) ; aplica la ruta actualizada al archivo
+                             (let ((nuevo_archivo (append (list (car (car archivo))) (list (cadr (car archivo))) (list (list (car (caddr (car archivo))) destino)) (cdr (cddr (car archivo)))))) ; aplica la ruta actualizada al archivo
                                (list (sistema_nombre sistema)
                                      (sistema_drives sistema)
                                      (sistema_usuarios sistema)
                                      (sistema_log sistema)
                                      (sistema_folders sistema)
-                                     (append (sistema_files sistema) (list nuevo_archivo))))) ; añade el archivo ya pegado en la dirección destino
+                                     (append (sistema_files sistema) (list nuevo_archivo)) ; añade el archivo ya pegado en la dirección destino
+                                     (sistema_papeleraC sistema)
+                                     (sistema_papeleraA sistema))))
                          (let ((carpetas_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_folders sistema)))) ; si se ha copiado una carpeta, crea una lista con todas las carpetas que esta contiene              
                            (let ((archivos_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_files sistema)))) ; crea una lista con todos los archivos que la carpeta copiada contiene
                              (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-append destino (string-join (cdr (string-split (cadr (caddr folder))))))) (cdr (cdddr folder))))carpetas_int))) ; a la copia de carpetas, le actualiza la dirección a la dirección destino
@@ -252,7 +298,9 @@
                                          (sistema_usuarios sistema)
                                          (sistema_log sistema)
                                          (append (sistema_folders sistema) (list carpeta_copia_principal) carpetas_copy) ; añade la carpeta copiada junto a sus carpetas contenidas con su nueva dirección
-                                         (append (sistema_files sistema) archivos_copy)))))))))))))) ; añade los archivos que estaban contenidos dentro de la carpeta copiada con su nueva dirección
+                                         (append (sistema_files sistema) archivos_copy) ; añade los archivos que estaban contenidos dentro de la carpeta copiada con su nueva dirección
+                                         (sistema_papeleraC sistema)
+                                         (sistema_papeleraA sistema))))))))))))))
 
 ; Función move
 ; Mueve una carpeta o archivo a una dirección destino. Trabaja de igual forma que la función copy, pero a excepción de que esta función borra los archivos en la ruta origen. En caso de mover una carpeta, lo mueve junto a sus subdirectorios y subarchivos
@@ -260,20 +308,22 @@
 ; Recorrido: Sistema
 (define move (lambda (sistema)
                (lambda (dato destino)
-                 (let ((destino (string-append (string-upcase (substring destino 0 1)) (substring destino 1)))) (newline) (display destino) ; Hace que el primer elemento de la ruta (drive) sea tomado como mayúscula, por lo que no es case-sensitive
+                (let ((destino (string-append (string-upcase (substring destino 0 1)) (substring destino 1)))) ; Hace que el primer elemento de la ruta (drive) sea tomado como mayúscula, por lo que no es case-sensitive
                  (let ((carpeta (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema)))) ; genera una lista con la carpeta a mover. si no existe, entrega una lista vacía (null)        
                    (let ((archivo (filter (lambda (elemento) (and (string=? dato (car elemento)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema)))) ; genera una lista con el archivo a mover. si no existe, entrega una lista vacía (null)
-                     (if (eq? carpeta null) ; pregunta si la carpeta a mover existe
-                         (if (eq? archivo null) ; pregunta si el archivo a mover existe
+                     (if (or (eq? carpeta null) (not (eq? null (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (caddr elemento)) destino))) (sistema_folders sistema))))) ; pregunta si la carpeta a copiar existe y si no existe una carpeta con el mismo nombre en la dirección destino
+                         (if (or (eq? archivo null) (not (eq? null (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (caddr elemento)) destino))) (sistema_files sistema))))) ; pregunta si el archivo a copiar existe y si no existe un archivo con el mismo nombre en la dirección destino
                              sistema ; si no se ha movido nada por no existir (en la ruta actualmente visible) no se modifica nada
-                               (let ((nuevo_archivo (append (list (car (car archivo))) (list (cadr (car archivo))) (list (list (car (caddr (car archivo))) destino)) (cdr (cddr (car archivo)))))) ; aplica la ruta actualizada al archivo
-                                 (let ((files_archivo_borrado (filter (lambda (elemento) (not (eq? (car elemento) dato))) (sistema_files sistema)))) ; recrea la lista de archivos anterior, pero con el archivo a mover eliminado de la ruta actual
+                             (let ((nuevo_archivo (append (list (car (car archivo))) (list (cadr (car archivo))) (list (list (car (caddr (car archivo))) destino)) (cdr (cddr (car archivo)))))) ; aplica la ruta actualizada al archivo
+                               (let ((files_archivo_borrado (filter (lambda (elemento) (not (eq? (car elemento) dato))) (sistema_files sistema)))) ; recrea la lista de archivos anterior, pero con el archivo a mover eliminado de la ruta actual
                                    (list (sistema_nombre sistema)
                                          (sistema_drives sistema)
                                          (sistema_usuarios sistema)
                                          (sistema_log sistema)
                                          (sistema_folders sistema)
-                                         (append (list files_archivo_borrado) (list nuevo_archivo)))))) ; añade el archivo a una lista donde se eliminó este en su ruta de origen
+                                         (append (list files_archivo_borrado) (list nuevo_archivo)) ; añade el archivo a una lista donde se eliminó este en su ruta de origen
+                                         (sistema_papeleraC sistema)
+                                         (sistema_papeleraA sistema)))))
                          (let ((carpetas_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_folders sistema)))) ; crea una lista con todas las carpetas que la carpeta a mover contiene              
                            (let ((archivos_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_files sistema)))) ; crea una lista con todos los archivos que la carpeta a mover contiene
                              (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-append destino (string-join (cdr (string-split (cadr (caddr folder)) "/")) "/") "/")) (cdr (cdddr folder)))) carpetas_int))) ; a la copia de carpetas, le actualiza la dirección a la dirección destino
@@ -286,7 +336,9 @@
                                              (sistema_usuarios sistema)
                                              (sistema_log sistema)
                                              (append folders_carpetas_borrar carpetas_copy (list carpeta_copia_principal)) ; añade la carpeta movida junto a sus carpetas contenidas con su nueva dirección, y las elimina de su ruta origen
-                                             (append files_archivos_borrar archivos_copy)))))))))))))))) ; añade los archivos que estaban contenidos dentro de la carpeta movida con su nueva dirección, y las elimina de su ruta origen
+                                             (append files_archivos_borrar archivos_copy) ; añade los archivos que estaban contenidos dentro de la carpeta movida con su nueva dirección, y las elimina de su ruta origen
+                                             (sistema_papeleraC sistema)
+                                             (sistema_papeleraA sistema))))))))))))))))
 
 ; Función rename
 ; Renombra un archivo o carpeta QUE ESTÉ ACTUALMENTE VISIBLE, además, si se modifica el nombre de una carpeta se modifica la ruta de las subcarpetas y subarchivos
@@ -308,26 +360,27 @@
                                           (sistema_usuarios sistema)
                                           (sistema_log sistema)
                                           (sistema_folders sistema)
-                                          (append borrar_archivo (list nuevo_archivo))))))
+                                          (append borrar_archivo (list nuevo_archivo))
+                                          (sistema_papeleraC sistema)
+                                          (sistema_papeleraA sistema)))))
                             (let ((borrar_carpeta (filter (lambda (elemento) (and (not (eq? (car elemento) nombre_or)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema))))
-                              (let ((carpetas_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) nombre_or)) (sistema_folders sistema)))) ; crea una lista con todas las carpetas que la carpeta a renombrar contiene
-                                (let ((archivos_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) nombre_or)) (sistema_files sistema)))) ; crea una lista con todos los archivos que la carpeta a renombrar contiene
-                                  (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-replace (cadr (caddr folder)) (string-append nombre_or "/") (string-append nombre_nu "/"))) (cdr (cdddr folder)))) carpetas_int))) ; a la copia de carpetas, le actualiza la dirección con el nuevo nombre del folder que las contiene
-                                    (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-replace (cadr (caddr file)) (string-append nombre_or "/") (string-append nombre_nu "/")))) (cdr (cdddr file)))) archivos_int))) ; a la copia de archivos, le actualiza la dirección con el nuevo nombre del folder que las contiene
-                                      (let ((folders_carpetas_borrar (filter (lambda (elemento) (and (not (eq? (car elemento) nombre_or)) (not (string-contains? (cadr (caddr elemento)) nombre_or)))) (sistema_folders sistema)))) ; crea lista sin las carpetas que están siendo modificadas
-                                        (let ((files_archivos_borrar (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) nombre_or))) (sistema_files sistema)))) ; crea lista sin los archivos que están siendo modificados
-                                          (let ((nueva_carpeta (append (list nombre_nu) (cdr (car carpeta_existe))))) ; crea una carpeta con el nuevo nombre
+                              (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-replace (cadr (caddr folder)) (string-append nombre_or "/") (string-append nombre_nu "/"))) (cdr (cdddr folder)))) (subdir_borrar sistema nombre_or)))) ; a la copia de carpetas, le actualiza la dirección con el nuevo nombre del folder que las contiene
+                                 (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-replace (cadr (caddr file)) (string-append nombre_or "/") (string-append nombre_nu "/")))) (cdr (cdddr file)))) (archivos_borrar sistema nombre_or)))) ; a la copia de archivos, le actualiza la dirección con el nuevo nombre del folder que las contiene
+                                    (let ((folders_carpetas_borrar (filter (lambda (elemento) (and (not (eq? (car elemento) nombre_or)) (not (string-contains? (cadr (caddr elemento)) nombre_or)))) (sistema_folders sistema)))) ; crea lista sin las carpetas que están siendo modificadas
+                                       (let ((nueva_carpeta (append (list nombre_nu) (cdr (car carpeta_existe))))) ; crea una carpeta con el nuevo nombre
                                           (list (sistema_nombre sistema)
                                                 (sistema_drives sistema)
                                                 (sistema_usuarios sistema)
                                                 (sistema_log sistema)
                                                 (append folders_carpetas_borrar carpetas_copy (list nueva_carpeta)) ; agrega la lista de carpetas con todo modificado
-                                                (append files_archivos_borrar archivos_copy)))))))))))))))))) ; agrega la lista de archivos con todo modificado
+                                                (append (archivos_borrados sistema nombre_or) archivos_copy) ; agrega la lista de archivos con todo modificado
+                                                (sistema_papeleraC sistema)
+                                                (sistema_papeleraA sistema)))))))))))))))
             
 ; Función dir
 ; Permite mostrar por pantalla los elementos del directorio actual y los elemenetos de subdirectorios, dependiendo del comando.
 ; Requisito de implementación: Deben aplicarse paréntesis extra a la hora de llamar a la función para el caso de no recibir argumentos. Ex: (display (run K dir)) -----> (display ((run K dir)))
-; Dominio: Sistema X comandos (null, "/s", "/a", "/s /a" y "/a /s")
+; Dominio: Sistema X comandos (null, "/s", "/a", "/s /a", "/a /s" y "/?")
 ; Recorrido: String (separando cada elemento por " --- ")
 (define dir (lambda (sistema)
               (lambda args ; permite entregar N cantidad de argumentos, pudiendo variar
@@ -382,13 +435,17 @@
                                            (sistema_usuarios sistema)
                                            (list (car (sistema_log sistema)) (string-append letra_s ":/")) ; actualiza el path a la raiz de la unidad ya que se estaba posicionado dentro de ella
                                            reserva_folders
-                                           reserva_files)
+                                           reserva_files
+                                           (sistema_papeleraC sistema)
+                                           (sistema_papeleraA sistema))
                                      (list (sistema_nombre sistema)
                                            (append borrar_drive (cons (list letra nombre (caddr (car drive_a_borrar))) '())) ; registra el drive con su nuevo nombre a los drives del sistema
                                            (sistema_usuarios sistema)
                                            (sistema_log sistema)
                                            reserva_folders
-                                           reserva_files)))))))
+                                           reserva_files
+                                           (sistema_papeleraC sistema)
+                                           (sistema_papeleraA sistema))))))))
                        (if (and (string? letra) (member (string-ref letra 0) (map car (sistema_drives sistema))))
                            (let ((reserva_folders (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) (string-append letra ":/")))) (sistema_folders sistema)))) ; Crea una lista con las carpetas que no pertenecen al drive a formatear
                              (let ((reserva_files (filter (lambda (elemento) (not (string-contains? (cadr (caddr elemento)) (string-append letra ":/")))) (sistema_files sistema)))) ; Crea una lista con los archivos que no pertenecen al drive a formatear
@@ -400,18 +457,22 @@
                                            (sistema_usuarios sistema)
                                            (list (car (sistema_log sistema)) (string-append letra ":/")) ; actualiza el path a la raiz de la unidad ya que se estaba posicionado dentro de ella
                                            reserva_folders
-                                           reserva_files)
+                                           reserva_files
+                                           (sistema_papeleraC sistema)
+                                           (sistema_papeleraA sistema))
                                      (list (sistema_nombre sistema)
                                            (append borrar_drive (cons (list letra nombre (caddr (car drive_a_borrar))) '())) ; registra el drive con su nuevo nombre a los drives del sistema
                                            (sistema_usuarios sistema)
                                            (sistema_log sistema)
                                            reserva_folders
-                                           reserva_files))))))
+                                           reserva_files
+                                           (sistema_papeleraC sistema)
+                                           (sistema_papeleraA sistema)))))))
                            sistema)))))
                                    
 
 
-
+(provide run system add-drive register login logout switch-drive md cd add-file del rd copy move ren dir format)
 
 
 
