@@ -1,0 +1,9 @@
+#lang scheme
+
+(require "TDA_system.rkt")
+(require "TDA_fecha.rkt")
+(require "TDA_selectorSistema.rkt")
+(require "TDA_selectorDatos.rkt")
+
+; SCRIPT DE PRUEBAS LABORATORIO 1
+

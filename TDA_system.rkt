@@ -132,7 +132,7 @@
 ; Recorrido: sistema
 (define cd (lambda (sistema)
              (lambda (comando)
-               (if (eq? comando "/")
+               (if (string=? comando "/")
                    (list (sistema_nombre sistema)
                          (sistema_drives sistema)
                          (sistema_usuarios sistema)
@@ -141,7 +141,7 @@
                          (sistema_files sistema)
                          (sistema_papeleraC sistema)
                          (sistema_papeleraA sistema))
-                   (if (eq? comando "..")
+                   (if (string=? comando "..")
                        (if (string=? (caddr (sistema_nombre sistema)) (cadr (sistema_log sistema))) 
                            sistema ; si el drive actual es igual al path actual, no se puede devolver más por lo que no se hace nada
                            (list (sistema_nombre sistema)
@@ -230,7 +230,7 @@
                         sistema)))))
 
 ; Función remove directory
-; Elimina una carpeta (directorio) siempre y cuando este se encuentre vacío (no posee archivos NI otras carpetas dentro)
+; Elimina una carpeta (directorio) siempre y cuando este se encuentre vacío (no posee archivos NI otras carpetas dentro). No agrega la carpeta a la papelera ya que se está borrando una carpeta vacía.
 ; Dominio: Sistema X nombre (o path)
 ; Recorrido: Sistema
 (define rd (lambda (sistema)
@@ -239,7 +239,7 @@
                    (if (and (and (member nombre (map car (sistema_folders sistema))) ; revisa si la carpeta existe
                                  (eq? null (archivos_borrar sistema nombre))) ; revisa si hay archivos dentro de la carpeta; si es nula se procede, sino, no se elimina la carpeta
                             (eq? null (subdir_borrar sistema nombre))) ; al igual que lo anterior, revisa si hay subdirectorios dentro de la carpeta. Sigue las mismas condiciones que el anterior
-                       (let ((new_list (filter (lambda (elemento) (not (eq? (car elemento) nombre))) (sistema_folders sistema)))) ; crea una lista de directorios sin el directorio a eliminar
+                       (let ((new_list (filter (lambda (elemento) (not (string=? (car elemento) nombre))) (sistema_folders sistema)))) ; crea una lista de directorios sin el directorio a eliminar
                          (list (sistema_nombre sistema)
                                (sistema_drives sistema)
                                (sistema_usuarios sistema)
@@ -253,7 +253,7 @@
                      (if (and (and (member carpeta (map car (sistema_folders sistema))) ; revisa si la carpeta existe
                                    (eq? null (archivos_borrar sistema nombre))) ; revisa si la carpeta contiene archivos
                               (eq? null (subdir_borrar sistema nombre))) ; revisa si la carpeta contiene sub-carpetas
-                         (let ((new_list (filter (lambda (elemento) (not (eq? (car elemento) carpeta))) (sistema_folders sistema))))
+                         (let ((new_list (filter (lambda (elemento) (not (string=? (car elemento) carpeta))) (sistema_folders sistema))))
                            (list (sistema_nombre sistema)
                                  (sistema_drives sistema)
                                  (sistema_usuarios sistema)
@@ -307,21 +307,21 @@
 ; Dominio: Sistema X dato (archivo o carpeta a mover) X destino (dirección de destino)
 ; Recorrido: Sistema
 (define move (lambda (sistema)
-               (lambda (dato destino)
-                (let ((destino (string-append (string-upcase (substring destino 0 1)) (substring destino 1)))) ; Hace que el primer elemento de la ruta (drive) sea tomado como mayúscula, por lo que no es case-sensitive
-                 (let ((carpeta (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema)))) ; genera una lista con la carpeta a mover. si no existe, entrega una lista vacía (null)        
-                   (let ((archivo (filter (lambda (elemento) (and (string=? dato (car elemento)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema)))) ; genera una lista con el archivo a mover. si no existe, entrega una lista vacía (null)
-                     (if (or (eq? carpeta null) (not (eq? null (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (caddr elemento)) destino))) (sistema_folders sistema))))) ; pregunta si la carpeta a copiar existe y si no existe una carpeta con el mismo nombre en la dirección destino
-                         (if (or (eq? archivo null) (not (eq? null (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (caddr elemento)) destino))) (sistema_files sistema))))) ; pregunta si el archivo a copiar existe y si no existe un archivo con el mismo nombre en la dirección destino
+                 (lambda (dato destino)
+                   (let ((destino (string-append (string-upcase (substring destino 0 1)) (substring destino 1)))) ; Hace que el primer elemento de la ruta (drive) sea tomado como mayúscula, por lo que no es case-sensitive
+                     (let ((carpeta (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema)))) ; genera una lista con la carpeta a mover. si no existe, entrega una lista vacía (null)        
+                       (let ((archivo (filter (lambda (elemento) (and (string=? dato (car elemento)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema)))) ; genera una lista con el archivo a mover. si no existe, entrega una lista vacía (null)
+                         (if (or (eq? carpeta null) (not (eq? null (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (caddr elemento)) destino))) (sistema_folders sistema))))) ; pregunta si la carpeta a copiar existe y si no existe una carpeta con el mismo nombre en la dirección destino
+                           (if (or (eq? archivo null) (not (eq? null (filter (lambda (elemento) (and (string=? dato (car elemento)) (string=? (cadr (caddr elemento)) destino))) (sistema_files sistema))))) ; pregunta si el archivo a copiar existe y si no existe un archivo con el mismo nombre en la dirección destino
                              sistema ; si no se ha movido nada por no existir (en la ruta actualmente visible) no se modifica nada
                              (let ((nuevo_archivo (append (list (car (car archivo))) (list (cadr (car archivo))) (list (list (car (caddr (car archivo))) destino)) (cdr (cddr (car archivo)))))) ; aplica la ruta actualizada al archivo
-                               (let ((files_archivo_borrado (filter (lambda (elemento) (not (eq? (car elemento) dato))) (sistema_files sistema)))) ; recrea la lista de archivos anterior, pero con el archivo a mover eliminado de la ruta actual
+                               (let ((files_archivo_borrado (filter (lambda (elemento) (or (not (eq? (car elemento) dato)) (not (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento)))))) (sistema_files sistema)))) ; recrea la lista de archivos anterior, pero con el archivo a mover eliminado de la ruta actual
                                    (list (sistema_nombre sistema)
                                          (sistema_drives sistema)
                                          (sistema_usuarios sistema)
                                          (sistema_log sistema)
                                          (sistema_folders sistema)
-                                         (append (list files_archivo_borrado) (list nuevo_archivo)) ; añade el archivo a una lista donde se eliminó este en su ruta de origen
+                                         (append files_archivo_borrado (list nuevo_archivo)) ; añade el archivo a una lista donde este se eliminó en su ruta de origen
                                          (sistema_papeleraC sistema)
                                          (sistema_papeleraA sistema)))))
                          (let ((carpetas_int (filter (lambda (elemento) (string-contains? (cadr (caddr elemento)) (string-append (cadr (caddr (car carpeta))) dato "/"))) (sistema_folders sistema)))) ; crea una lista con todas las carpetas que la carpeta a mover contiene              
@@ -353,7 +353,7 @@
                         (if (or (eq? null carpeta_existe) (not (eq? null unicidad_folders)))
                             (if (or (eq? null archivo_existe) (not (eq? null unicidad_files)))
                                 sistema
-                                (let ((borrar_archivo (filter (lambda (elemento) (and (not (eq? (car elemento) nombre_or)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_files sistema)))) ; crea una lista sin el archivo al que se le quiere cambiar el nombre
+                                (let ((borrar_archivo (filter (lambda (elemento) (or (not (eq? (car elemento) nombre_or)) (not (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento)))))) (sistema_files sistema)))) ; crea una lista sin el archivo al que se le quiere cambiar el nombre
                                   (let ((nuevo_archivo (append (list nombre_nu) (cdr (car archivo_existe))))) ; crea el archivo a modificar con su nuevo nombre
                                     (list (sistema_nombre sistema)
                                           (sistema_drives sistema)
@@ -363,10 +363,9 @@
                                           (append borrar_archivo (list nuevo_archivo))
                                           (sistema_papeleraC sistema)
                                           (sistema_papeleraA sistema)))))
-                            (let ((borrar_carpeta (filter (lambda (elemento) (and (not (eq? (car elemento) nombre_or)) (eq? (cadr (sistema_log sistema)) (cadr (caddr elemento))))) (sistema_folders sistema))))
-                              (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-replace (cadr (caddr folder)) (string-append nombre_or "/") (string-append nombre_nu "/"))) (cdr (cdddr folder)))) (subdir_borrar sistema nombre_or)))) ; a la copia de carpetas, le actualiza la dirección con el nuevo nombre del folder que las contiene
+                            (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-replace (cadr (caddr folder)) (string-append nombre_or "/") (string-append nombre_nu "/"))) (cdr (cdddr folder)))) (subdir_borrar sistema nombre_or)))) ; a la copia de carpetas, le actualiza la dirección con el nuevo nombre del folder que las contiene
                                  (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-replace (cadr (caddr file)) (string-append nombre_or "/") (string-append nombre_nu "/")))) (cdr (cdddr file)))) (archivos_borrar sistema nombre_or)))) ; a la copia de archivos, le actualiza la dirección con el nuevo nombre del folder que las contiene
-                                    (let ((folders_carpetas_borrar (filter (lambda (elemento) (and (not (eq? (car elemento) nombre_or)) (not (string-contains? (cadr (caddr elemento)) nombre_or)))) (sistema_folders sistema)))) ; crea lista sin las carpetas que están siendo modificadas
+                                    (let ((folders_carpetas_borrar (filter (lambda (elemento) (or (not (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento)))) (not (eq? (car elemento) nombre_or)))) (subdir_borrados sistema nombre_or)))) ; crea lista sin las carpetas que están siendo modificadas 
                                        (let ((nueva_carpeta (append (list nombre_nu) (cdr (car carpeta_existe))))) ; crea una carpeta con el nuevo nombre
                                           (list (sistema_nombre sistema)
                                                 (sistema_drives sistema)
@@ -375,7 +374,7 @@
                                                 (append folders_carpetas_borrar carpetas_copy (list nueva_carpeta)) ; agrega la lista de carpetas con todo modificado
                                                 (append (archivos_borrados sistema nombre_or) archivos_copy) ; agrega la lista de archivos con todo modificado
                                                 (sistema_papeleraC sistema)
-                                                (sistema_papeleraA sistema)))))))))))))))
+                                                (sistema_papeleraA sistema))))))))))))))
             
 ; Función dir
 ; Permite mostrar por pantalla los elementos del directorio actual y los elemenetos de subdirectorios, dependiendo del comando.
@@ -392,22 +391,22 @@
                                           (if (and (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch)))) (not (member #\h (car car_arch)))) ; pregunta para ver si el archivo o carpeta se encuentra en el directorio actual, y si además este está visible
                                               (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función pero sin el primer elemento y con el string añadido al string inicial
                                               (ciclo (cdr car_arch) str)) ; en caso de no encontrarse visible o no estar en el directorio actual, no hace nada y vuelve a llamar a la función sin el elemento
-                                          (if (eq? (car args) "/s")
+                                          (if (string=? (car args) "/s")
                                               (if (and (or (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch))))
                                                            (string-contains? (cadr (caddr (car car_arch))) (cadr (sistema_log sistema)))) ; en este caso además de preguntar por los elementos directamente visibles, pregunta además por los subelementos
                                                        (not (member #\h (car car_arch))))
                                                   (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
                                                   (ciclo (cdr car_arch) str))
-                                              (if (eq? (car args) "/a")
+                                              (if (string=? (car args) "/a")
                                                   (if (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch)))) ; en este caso simplemente pregunta si está en el mismo directorio, no importa si está oculto
                                                       (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
                                                       (ciclo (cdr car_arch) str))
-                                                  (if (or (eq? (car args) "/s /a") (eq? (car args) "/a /s")) ; toma el caso en el que se entreguen al revés los comandos
+                                                  (if (or (string=? (car args) "/s /a") (eq? (car args) "/a /s")) ; toma el caso en el que se entreguen al revés los comandos
                                                       (if (or (string=? (cadr (sistema_log sistema)) (cadr (caddr (car car_arch)))) ; similar a "/s" pero ya no importa si el elemento está oculto o no
                                                               (string-contains? (cadr (caddr (car car_arch))) (cadr (sistema_log sistema))))
                                                           (begin (ciclo (cdr car_arch) (string-append str (car (car car_arch)) " --- "))) ; vuelve a llamar a la función, sin el elemento recién analizado pero agregándoselo al string
                                                           (ciclo (cdr car_arch) str))
-                                                      (if (eq? (car args) "/?")
+                                                      (if (string=? (car args) "/?")
                                                           (begin (display "Comandos disponibles:") (newline)
                                                                  (display "- null: Si no se entregan argumentos a la función, se mostrarán los elementos del directorio actual a EXCEPCIÓN de los elementos de carácter oculto (h)") (newline)
                                                                  (display "- /s: Este comando permite mostrar los elementos tanto del directorio actual, como de los subdirectorios de este a EXCEPCIÓN de los elementos de carácter oculto (h)") (newline)
@@ -473,84 +472,3 @@
 
 
 (provide run system add-drive register login logout switch-drive md cd add-file del rd copy move ren dir format)
-
-
-
-
-
-
-
-; CÓDIGOS DE PRUEBA
-(define S0 (system "newSystem")) ; sistema
-
-(define S1 ((run S0 add-drive) #\C "SO" 1000)) ; add drive
-(define S2 ((run S1 add-drive) #\C "SO1" 3000))
-(define S3 ((run S2 add-drive) #\D "Util" 2000))
-
-(define S4 ((run S3 register) "user1")) ; register users
-(define S5 ((run S4 register) "user1"))
-(define S6 ((run S5 register) "user2"))
-
-(define S7 ((run S6 login) "user1")) ; login
-(define S8 ((run S7 login) "user2"))
-
-(define S9 (run S8 logout)) ; logout
-(define S10 ((run S9 login) "user2"))
-
-(define S11 ((run S10 switch-drive) #\K)) ; fijar drive
-(define S12 ((run S11 switch-drive) #\C))
-
-(define S13 ((run S12 md) "folder1")) ; make directory
-(define S14 ((run S13 md) "folder2"))
-(define S15 ((run S14 md) "folder2"))
-(define S16 ((run S15 md) "folder3"))
-
-(define S17 ((run S16 cd) "folder2")) ; change directory
-
-(define S18 ((run S17 md) "folder21")) ; distintas combinaciones entre cd y md
-(define S19 ((run S18 md) "folder21"))
-(define S20 ((run S19 cd) "folder21"))
-(define S21 ((run S20 cd) "folder22"))
-(define S22 ((run S21 cd) ".."))
-(define S23 ((run S22 cd) "folder21"))
-(define S24 ((run S23 md) "folder211"))
-(define S25 ((run S24 cd) "folder211"))
-(define S26 ((run S24 cd) "/"))
-(define S27 ((run S26 switch-drive) #\D))
-(define S28 ((run S27 md) "folder5"))
-(define S29 ((run S28 cd) "folder5"))
-                     
-(define S32 ((run S29 add-file) (file "foo1.txt" "txt" "hello world 1"))) ; add file
-(define S33 ((run S32 add-file) (file "foo2.txt" "txt" "hello world 2")))
-(define S34 ((run S33 add-file) (file "foo3.docx" "docx" "hello world 3")))
-(define S35 ((run S34 add-file) (file "goo4.docx" "docx" "hello world 4" #\h #\r)))
-
-(define S38 ((run S35 del) "goo4.docx")) ; del
-(define S39 ((run S35 cd) ".."))
-(define S40 ((run S35 del) "folder1"))
-
-(define S41 ((run S38 rd) "folder1")) ; remove directory
-(define S42 ((run S41 cd) "folder1"))
-(define S44 ((run S42 cd) ".."))
-
-(define S46 ((run S41 copy) "foo1.txt" "C:/folder3/")) ; copy
-
-(define S49 ((run S41 move) "folder3" "D:/")) ; move
-
-(define S52 ((run S49 ren) "foo1.txt" "newFoo1.txt")) ; rename
-
-
-; ejemplos de único uso (para probar funciones)
-(define A ((run S41 switch-drive) #\C))
-(define S ((run A move) "folder2" "D:/"))
-(define D ((run A cd) "folder2"))
-(define F ((run D add-file) (file "PRUEBA.docx" "docx" "TESTEO" #\h #\r)))
-(define G ((run F cd) ".."))
-(define H ((run G move) "folder2" "D:/"))
-(define J ((run H switch-drive) #\D))
-(define K ((run J ren) "folder2" "ARCHIVO_DE_PRUEBA"))
-(define L ((run K cd) "folder5"))
-(define Ñ ((run L format) #\C "HOLA"))
-(define Z ((run L format) #\D "HOLA"))
-(define X ((run L format) "C" "HOLA"))
-(define C ((run L format) "D" "HOLA"))
