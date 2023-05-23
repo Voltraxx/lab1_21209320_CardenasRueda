@@ -1,8 +1,8 @@
 #lang scheme
 
-(require "TDAfecha_21209320_CardenasRueda")
-(require "TDAselectorSistema_21209320_CardenasRueda")
-(require "TDAselectorDatos_21209320_CardenasRueda")
+(require "TDAfecha_21209320_CardenasRueda.rkt")
+(require "TDAselectorSistema_21209320_CardenasRueda.rkt")
+(require "TDAselectorDatos_21209320_CardenasRueda.rkt")
 
 ; Función sistema
 ; Constructor
@@ -364,7 +364,7 @@
                                           (sistema_papeleraC sistema)
                                           (sistema_papeleraA sistema)))))
                             (let ((carpetas_copy (map (lambda (folder) (list (car folder) (cadr folder) (list (car (caddr folder)) (string-replace (cadr (caddr folder)) (string-append nombre_or "/") (string-append nombre_nu "/"))) (cdr (cdddr folder)))) (subdir_borrar sistema nombre_or)))) ; a la copia de carpetas, le actualiza la dirección con el nuevo nombre del folder que las contiene
-                                 (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-replace (cadr (caddr file)) (string-append nombre_or "/") (string-append nombre_nu "/")))) (cdr (cdddr file)))) (archivos_borrar sistema nombre_or)))) ; a la copia de archivos, le actualiza la dirección con el nuevo nombre del folder que las contiene
+                                 (let ((archivos_copy (map (lambda (file) (append (list (car file)) (list (cadr file)) (list (list (car (caddr file)) (string-replace (cadr (caddr file)) (string-append nombre_or "/") (string-append nombre_nu "/")))) (cdr (cddr file)))) (archivos_borrar sistema nombre_or)))) ; a la copia de archivos, le actualiza la dirección con el nuevo nombre del folder que las contiene
                                     (let ((folders_carpetas_borrar (filter (lambda (elemento) (or (not (string=? (cadr (sistema_log sistema)) (cadr (caddr elemento)))) (not (eq? (car elemento) nombre_or)))) (subdir_borrados sistema nombre_or)))) ; crea lista sin las carpetas que están siendo modificadas 
                                        (let ((nueva_carpeta (append (list nombre_nu) (cdr (car carpeta_existe))))) ; crea una carpeta con el nuevo nombre
                                           (list (sistema_nombre sistema)

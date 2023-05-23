@@ -1,9 +1,9 @@
 #lang scheme
 
-(require "TDAsystem_21209320_CardenasRueda")
-(require "TDAfecha_21209320_CardenasRueda")
-(require "TDAselectorSistema_21209320_CardenasRueda")
-(require "TDAselectorDatos_21209320_CardenasRueda")
+(require "TDAsystem_21209320_CardenasRueda.rkt")
+(require "TDAfecha_21209320_CardenasRueda.rkt")
+(require "TDAselectorSistema_21209320_CardenasRueda.rkt")
+(require "TDAselectorDatos_21209320_CardenasRueda.rkt")
 
 ; SCRIPT DE PRUEBAS LABORATORIO 1
 ; Se le ha puesto como comentario a algunas evaluaciones del script debido a que no se han implementado sus funciones.
